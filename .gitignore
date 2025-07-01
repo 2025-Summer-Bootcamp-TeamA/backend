@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.log
+
+# Django
+db.sqlite3
+*.sqlite3
+*.env
+.env
+.env.*
+*.pot
+*.pyc
+media/
+staticfiles/
+local_settings.py
+
+# Django migrations
+**/migrations/__pycache__/
+**/migrations/*.pyc
+**/migrations/*.pyo
+**/migrations/*.pyd
+**/migrations/*.py~
+
+# If using Django Debug Toolbar or coverage
+.coverage
+htmlcov/
+coverage.xml
+
+# Pytest
+.pytest_cache/
+.cache/
+
+# Virtual environment
+venv/
+.venv/
+
+# Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+.idea
+
+# VSCode Python env
+.python-version
+
+# Pipenv
+Pipfile.lock
+
+# MyPy
+.mypy_cache/
+
+# Celery
+celerybeat-schedule
+
+# System files
+Thumbs.db
+ehthumbs.db
