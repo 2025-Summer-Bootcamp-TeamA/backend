@@ -10,16 +10,8 @@ ALLOWED_HOSTS = ["*"]
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME', 'mydatabase'),
-        'USER': os.getenv('DB_USER', 'sa'),
-        'PASSWORD': os.getenv('DB_PASSWORD', '1234'),
-        'HOST': os.getenv('DB_HOST', '127.0.0.1'),  # 백엔드 서버 로컬 환경 실행 시
-        # 'HOST': os.getenv('DB_HOST', 'mysqldb'),  # 백엔드 서버 docker로 실행 시
-        'PORT': int(os.getenv('DB_PORT', 3306)),
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-        },
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
