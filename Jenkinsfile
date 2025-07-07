@@ -40,9 +40,9 @@ pipeline {
 
     stage('Cleaning up') {
       steps {
-        sh "docker rmi ${repository}:${IMAGE_TAG}" // docker image 제거
+        sh "docker system prune -af"
       }
-    } 
+    }
 
 //     stage('Trigger CD Pipeline') {
 //       steps {
