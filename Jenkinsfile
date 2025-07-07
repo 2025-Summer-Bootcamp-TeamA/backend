@@ -49,13 +49,13 @@ pipeline {
     success {
       echo "CI pipeline succeeded. Image: ${FULL_IMAGE}"
       // Optional: Slack Notification
-      slackSend channel: '#ci-notify', message: "✅ CI passed: ${FULL_IMAGE}"
+      // slackSend channel: '#ci-notify', message: "✅ CI passed: ${FULL_IMAGE}"
     }
 
     failure {
       echo "CI pipeline failed."
       // Optional: Slack Notification
-      slackSend channel: '#ci-notify', message: "❌ CI failed: ${env.BUILD_URL}"
+      // slackSend channel: '#ci-notify', message: "❌ CI failed: ${env.BUILD_URL}"
     }
   }
 }
