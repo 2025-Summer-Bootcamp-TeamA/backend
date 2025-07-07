@@ -6,6 +6,7 @@ pipeline {
     IMAGE_NAME = 'team-a-backend'                // Your image/project name
     IMAGE_TAG = "v0.${env.BUILD_NUMBER}"
     FULL_IMAGE = "${env.REGISTRY}/${env.IMAGE_NAME}:${env.IMAGE_TAG}"
+    DOCKERHUB_CREDENTIALS = credentials('docker-hub') // jenkins에 등록해 놓은 docker hub credentials 이름
   }
 
   options {
@@ -20,6 +21,12 @@ pipeline {
       }
     }
 
+    stage('Login'){
+      steps{
+        sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin" // docker hub 로그인
+      }
+    }
+
     stage('Build & Push Image') {
       steps {
         script {
@@ -30,6 +37,12 @@ pipeline {
         }
       }
     }
+
+    stage('Cleaning up') {
+      steps {
+        sh "docker rmi ${repository}:${IMAGE_TAG}" // docker image 제거
+      }
+    } 
 
 //     stage('Trigger CD Pipeline') {
 //       steps {
