@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "post",
     "rest_framework",
     "drf_yasg",
+    "video",
 ]
 
 MIDDLEWARE = [
@@ -75,3 +76,7 @@ SWAGGER_SETTINGS = {
     },
     "USE_SESSION_AUTH": False,
 }
+import os
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
