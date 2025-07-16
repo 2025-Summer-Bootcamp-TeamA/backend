@@ -17,9 +17,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "apps.posts",
+    "apps.videos",
     "rest_framework",
     "drf_yasg",
-    "video",
 ]
 
 MIDDLEWARE = [
