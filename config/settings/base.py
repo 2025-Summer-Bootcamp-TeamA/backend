@@ -66,6 +66,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Swagger basePath 제거를 위한 설정
+FORCE_SCRIPT_NAME = None
+
 SWAGGER_SETTINGS = {
     "SECURITY_DEFINITIONS": {
         "Bearer": {
@@ -75,4 +78,8 @@ SWAGGER_SETTINGS = {
         }
     },
     "USE_SESSION_AUTH": False,
+    "DEFAULT_INFO": "config.urls.api_info",
+    "DOC_EXPANSION": "none",
+    "DEEP_LINKING": True,
+    "SPEC_URL": None,  # basePath 자동 감지 비활성화
 }

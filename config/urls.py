@@ -6,7 +6,14 @@ from rest_framework.permissions import AllowAny
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
-# Swagger 설정
+# 전체 경로를 위한 URL 패턴들 - 공통 경로 제거
+api_urls = [
+    path('api/v1/posts', include('apps.posts.urls')),
+    path('api/v1/videos', include('apps.videos.urls')),
+    path('docs/', include('apps.posts.urls')),  # 더미 경로로 공통 패턴 파괴
+]
+
+# Swagger 설정 - 전체 경로 표시용
 schema_view = get_schema_view(
     openapi.Info(
         title="TeamA API",
@@ -18,15 +25,15 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=[AllowAny],
+    patterns=[  # 실제 API만 포함
+        path('api/v1/posts', include('apps.posts.urls')),
+        path('api/v1/videos', include('apps.videos.urls')),
+    ],
 )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
-    # API 엔드포인트
-    path('', include('apps.posts.urls')),
-    path('', include('apps.videos.urls')),
-    
+] + api_urls + [
     # Swagger API 문서
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
