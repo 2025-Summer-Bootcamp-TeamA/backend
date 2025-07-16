@@ -15,9 +15,34 @@ class VideoUploadView(APIView):
     
     @swagger_auto_schema(
         operation_description="영상을 자동으로 저장합니다",
-        request_body=VideoSerializer,
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['title', 'artist', 'placeId', 'videoUrl', 'duration'],
+            properties={
+                'title': openapi.Schema(type=openapi.TYPE_STRING, description='영상 제목', example='모나리자'),
+                'artist': openapi.Schema(type=openapi.TYPE_STRING, description='아티스트명', example='레오나르도 다빈치'),
+                'placeId': openapi.Schema(type=openapi.TYPE_STRING, description='장소 ID', example='ChIJMwd0tBdzfDURdfxQfHwh4XQ'),
+                'thumbnailUrl': openapi.Schema(type=openapi.TYPE_STRING, description='썸네일 URL', example='https://example.com/thumbnails/video_001.jpg'),
+                'videoUrl': openapi.Schema(type=openapi.TYPE_STRING, description='영상 URL', example='https://example.com/videos/video_001.mp4'),
+                'duration': openapi.Schema(type=openapi.TYPE_INTEGER, description='영상 길이(초)', example=180),
+            }
+        ),
         responses={
-            201: openapi.Response(description="영상 저장 성공", schema=VideoSerializer),
+            201: openapi.Response(
+                description="영상 저장 성공",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'videoId': openapi.Schema(type=openapi.TYPE_INTEGER, description='영상 ID', example=1),
+                        'title': openapi.Schema(type=openapi.TYPE_STRING, description='영상 제목', example='모나리자'),
+                        'artist': openapi.Schema(type=openapi.TYPE_STRING, description='아티스트명', example='레오나르도 다빈치'),
+                        'placeId': openapi.Schema(type=openapi.TYPE_STRING, description='장소 ID', example='ChIJMwd0tBdzfDURdfxQfHwh4XQ'),
+                        'thumbnailUrl': openapi.Schema(type=openapi.TYPE_STRING, description='썸네일 URL', example='https://example.com/thumbnails/video_001.jpg'),
+                        'videoUrl': openapi.Schema(type=openapi.TYPE_STRING, description='영상 URL', example='https://example.com/videos/video_001.mp4'),
+                        'duration': openapi.Schema(type=openapi.TYPE_INTEGER, description='영상 길이(초)', example=180),
+                    }
+                )
+            ),
             400: openapi.Response(description="잘못된 요청")
         }
     )
