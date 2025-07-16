@@ -4,8 +4,8 @@ pipeline {
   environment {
     REGISTRY = 'docker.io/yuripbong3'       // Replace with your Docker Hub / registry
     IMAGE_NAME = 'team-a-backend'                // Your image/project name
-    IMAGE_TAG = "v0.${env.BUILD_NUMBER}"
-    FULL_IMAGE = "${env.REGISTRY}/${env.IMAGE_NAME}:${env.IMAGE_TAG}"
+    IMAGE_TAG = "v0.${BUILD_NUMBER}"
+    FULL_IMAGE = "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
     DOCKERHUB_CREDENTIALS = credentials('docker-hub') // jenkins에 등록해 놓은 docker hub credentials 이름
   }
 
