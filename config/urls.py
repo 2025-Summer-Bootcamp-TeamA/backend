@@ -24,8 +24,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # API 엔드포인트
-    path('api/v1/', include('apps.posts.urls')),
-    path('api/v1/', include('apps.videos.urls')),
+    path('', include('apps.posts.urls')),
+    path('', include('apps.videos.urls')),
     
     # Swagger API 문서
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),

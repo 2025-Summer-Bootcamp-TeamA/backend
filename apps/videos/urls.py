@@ -1,10 +1,7 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import VideoViewSet
-
-router = DefaultRouter()
-router.register(r'videos', VideoViewSet)
+from django.urls import path
+from . import views
 
 urlpatterns = [
-    path('', include(router.urls)),
+    # 영상 자동 저장 엔드포인트만 유지
+    path('api/v1/videos', views.VideoUploadView.as_view(), name='video-upload'),
 ]
