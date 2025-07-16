@@ -16,7 +16,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
-    "post",
+    "apps.posts",
     "rest_framework",
     "drf_yasg",
     "video",
