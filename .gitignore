@@ -57,8 +57,8 @@ node_modules/
 # VSCode Python env
 .python-version
 
-# Pipenv
-Pipfile.lock
+# UV (uv.lock should be committed to Git)
+# .venv/ is already ignored above
 
 # MyPy
 .mypy_cache/

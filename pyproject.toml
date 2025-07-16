@@ -1,0 +1,65 @@
+[project]
+name = "teama"
+version = "0.1.0"
+description = "Django REST API 프로젝트"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "TeamA", email = "team@example.com" }
+]
+
+dependencies = [
+    "django>=5.2.0,<5.3.0",
+    "djangorestframework>=3.16.0",
+    "django-cors-headers>=4.7.0",
+    "drf-yasg>=1.21.0",
+    "python-dotenv>=1.1.0",
+    "pillow>=11.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-django>=4.5.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+]
+production = [
+    "gunicorn>=21.0.0",
+    "whitenoise>=6.6.0",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = []  # Django 프로젝트는 패키지 배포용이 아님
+
+[tool.uv]
+# 개발 의존성 기본 포함
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "pytest-django>=4.5.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  \.git
+  | \.venv
+  | migrations
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+skip = ["migrations"]
