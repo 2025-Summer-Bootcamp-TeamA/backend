@@ -10,6 +10,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.decorators import api_view, parser_classes
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.core.files.storage import default_storage
 
 # ✅ .env 파일 로드 및 API 키 불러오기
 load_dotenv()
@@ -42,21 +43,19 @@ def generate_avatar(request):
 
     ext = os.path.splitext(image_file.name)[1]
     filename = f"{uuid.uuid4().hex}{ext}"
-    os.makedirs("media", exist_ok=True)
-    save_path = os.path.join("media", filename)
+    save_path = f"avatars/{filename}"
 
-    # 이미지 저장
-    with open(save_path, "wb+") as destination:
-        for chunk in image_file.chunks():
-            destination.write(chunk)
+    # GCS에 이미지 저장
+    file_path = default_storage.save(save_path, image_file)
+    file_url = default_storage.url(file_path)
 
     # MIME 타입 결정
-    mime_type, _ = mimetypes.guess_type(save_path)
+    mime_type, _ = mimetypes.guess_type(filename)
     if not mime_type:
         mime_type = "image/jpeg"  # 기본값
 
-    # base64로 인코딩
-    with open(save_path, "rb") as img:
+    # base64로 인코딩 (GCS에서 바로 읽어옴)
+    with default_storage.open(file_path, "rb") as img:
         encoded_string = base64.b64encode(img.read()).decode("utf-8")
 
     payload = {
@@ -79,14 +78,13 @@ def generate_avatar(request):
             timeout=15
         )
     except requests.exceptions.RequestException as e:
-        os.remove(save_path)
         return JsonResponse({
             "success": False,
             "error": "VisionStory 요청 중 예외 발생",
             "detail": str(e)
         }, status=500)
 
-    os.remove(save_path)
+    # default_storage.delete(file_path)  # 삭제 코드 제거
 
     if response.status_code == 200:
         result = response.json()
@@ -94,6 +92,7 @@ def generate_avatar(request):
             "success": True,
             "avatar_id": result.get("data", {}).get("avatar_id"),
             "thumbnail_url": result.get("data", {}).get("thumbnail_url"),
+            "uploaded_url": file_url,
             "message": result.get("message", "아바타 생성 성공")
         })
     else:

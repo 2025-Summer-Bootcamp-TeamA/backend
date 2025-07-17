@@ -1,7 +1,8 @@
 from .base import *
 from dotenv import load_dotenv
+from google.oauth2 import service_account
 
-env_path = os.path.join(BASE_DIR, "backend.env")
+env_path = os.path.join(BASE_DIR, ".env")
 if os.path.exists(env_path):
     load_dotenv(env_path)
 
@@ -16,3 +17,7 @@ DATABASES = {
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
+
+GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
+    os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+)
