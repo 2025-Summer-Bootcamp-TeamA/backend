@@ -20,3 +20,4 @@ python-dotenv
 
 google-cloud-storage
 django-storages
+openai>=1.14.3
