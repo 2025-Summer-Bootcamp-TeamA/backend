@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Video
+from ..models import Video
 
 class VideoSerializer(serializers.ModelSerializer):
     """영상 자동 저장용 시리얼라이저"""
@@ -18,4 +18,4 @@ class VideoSerializer(serializers.ModelSerializer):
             'videoUrl': {'required': True},
             'duration': {'required': True},
             'thumbnailUrl': {'required': False},
-        }
+        } 
