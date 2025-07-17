@@ -86,6 +86,21 @@ SWAGGER_SETTINGS = {
 
 INSTALLED_APPS += ["storages"]
 
-DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
-GS_BUCKET_NAME = os.getenv("GS_BUCKET_NAME")
-GS_CREDENTIALS = None  # service_account.Credentials.from_service_account_file 사용 예정
+# 기존 방식 주석 처리
+# DEFAULT_FILE_STORAGE = os.getenv("DEFAULT_FILE_STORAGE", "storages.backends.gcloud.GoogleCloudStorage")
+# GS_BUCKET_NAME = os.getenv("GS_BUCKET_NAME")
+# GS_CREDENTIALS = None  # service_account.Credentials.from_service_account_file 사용 예정
+
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+        "OPTIONS": {
+            "bucket_name": os.getenv("GS_BUCKET_NAME"),
+            # credentials는 dev.py에서 GS_CREDENTIALS로 정의됨
+            # "credentials": GS_CREDENTIALS,  # dev.py에서만 추가
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}

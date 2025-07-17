@@ -21,3 +21,4 @@ CORS_ORIGIN_ALLOW_ALL = True
 GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
     os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 )
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

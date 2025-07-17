@@ -4,12 +4,14 @@ from dotenv import load_dotenv
 
 # ✅ .env 로드
 load_dotenv()
+print("settings.py OPENAI_API_KEY:", os.getenv("OPENAI_API_KEY"))
 
 # ✅ 프로젝트 최상위 경로
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ✅ API 키
 VISIONSTORY_API_KEY = os.getenv("VISIONSTORY_API_KEY")  # 반드시 .env에 설정되어 있어야 함!
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # ✅ 시크릿 키 (실제 배포 시에는 환경변수에서 가져오는 방식으로 바꿔야 함)
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-q6z$d70f^g6b!=wcuk^$bntvd!p1^-n0pxlmg_c*a_vu0nlvj9')
@@ -34,6 +36,8 @@ INSTALLED_APPS = [
     # ✅ 외부 라이브러리
     'rest_framework',
     'drf_yasg',
+
+    'storages'
 ]
 
 # ✅ 미들웨어
