@@ -19,6 +19,7 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 # ✅ 앱 등록
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -26,7 +27,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     # ✅ 내부 앱
     'apps.avatars',
     'apps.posts',
@@ -37,6 +37,7 @@ INSTALLED_APPS = [
 ]
 
 # ✅ 미들웨어
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -51,6 +52,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'config.urls'
 
 # ✅ 템플릿 설정
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -58,6 +60,8 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -69,6 +73,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # ✅ 데이터베이스 (기본 SQLite)
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -85,6 +90,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # ✅ 국제화
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -98,4 +104,5 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # ✅ 기본 필드 타입
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
