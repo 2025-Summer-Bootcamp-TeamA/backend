@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import Tuple, Dict, List, Optional
+from typing import Dict, Optional
 from dataclasses import dataclass
 from enum import Enum
 
@@ -220,27 +220,4 @@ class ScriptAnalyzer:
             metadata={"scores": confidence_scores}
         )
 
-    def is_likely_description(self, text: str) -> Tuple[bool, float]:
-        """
-        규칙 기반으로 작품 설명 여부 판단
-        
-        Args:
-            text: 분석할 텍스트
-            
-        Returns:
-            Tuple[bool, float]: (설명여부, 신뢰도)
-        """
-        result = self.analyze_text(text)
-        return result.is_description, result.confidence
 
-    def batch_analyze(self, texts: List[str]) -> List[AnalysisResult]:
-        """여러 텍스트를 한번에 분석"""
-        return [self.analyze_text(text) for text in texts]
-
-    def get_description_texts(self, texts: List[str], min_confidence: float = 0.7) -> List[str]:
-        """신뢰도가 높은 설명 텍스트들만 필터링"""
-        results = self.batch_analyze(texts)
-        return [
-            texts[i] for i, result in enumerate(results)
-            if result.is_description and result.confidence >= min_confidence
-        ]
