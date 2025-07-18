@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "apps.posts",
     "apps.videos",
     "rest_framework",
+    "apps.authentication",
     "drf_yasg",
 ]
 
