@@ -1,10 +1,9 @@
 import json
 import logging
-import os
+import re
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
-import vertexai
-from vertexai.generative_models import GenerativeModel
+from .gemini_service import GeminiService
 
 logger = logging.getLogger(__name__)
 
@@ -32,26 +31,18 @@ class ArtworkInfoExtractor:
     - JSON 구조화된 응답
     """
     
-    def __init__(self, credentials_path: Optional[str] = None, location: str = "asia-northeast3"):
+    def __init__(self, gemini_service: Optional[GeminiService] = None):
         """
         ArtworkInfoExtractor 초기화
         
         Args:
-            credentials_path: Gemini 서비스 계정 파일 경로
-            location: Vertex AI 리전 (기본값: 서울)
+            gemini_service: GeminiService 인스턴스 (None이면 기본 설정으로 생성)
         """
-        # Gemini 설정
-        self.project_id = self._setup_credentials(credentials_path)
-        self.location = location
-        
-        # Vertex AI 초기화
-        vertexai.init(
-            project=self.project_id,
-            location=self.location
-        )
-        
-        # Gemini 모델 초기화
-        self.model = GenerativeModel('gemini-2.5-flash')
+        # Gemini 서비스 설정
+        if gemini_service:
+            self.gemini_service = gemini_service
+        else:
+            self.gemini_service = GeminiService()
         
         # 기본값 설정
         self.default_values = {
@@ -92,11 +83,9 @@ class ArtworkInfoExtractor:
             prompt = self._build_extraction_prompt(ocr_text)
             
             # Gemini API 호출
-            response = self.model.generate_content(prompt)
+            raw_response = self.gemini_service.generate_content(prompt)
             
-            if hasattr(response, 'candidates') and response.candidates:
-                raw_response = response.candidates[0].content.parts[0].text.strip()
-                
+            if raw_response:
                 # JSON 파싱 및 정보 추출
                 extracted_data = self._parse_gemini_response(raw_response)
                 
@@ -211,7 +200,6 @@ OCR 텍스트:
                 fallback_title = first_line
         
         # 연도 패턴 찾기
-        import re
         year_pattern = r'\b(\d{4}(?:-\d{4})?년?|\d{1,2}세기)\b'
         for line in lines:
             year_match = re.search(year_pattern, line)
@@ -235,31 +223,7 @@ OCR 텍스트:
             success=False
         )
     
-    def _setup_credentials(self, credentials_path: Optional[str]) -> str:
-        """서비스 계정 인증 정보 설정"""
-        try:
-            if credentials_path:
-                cred_file = credentials_path
-            else:
-                cred_file = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-                if not cred_file:
-                    raise ValueError("GOOGLE_APPLICATION_CREDENTIALS 환경변수가 설정되지 않았습니다.")
-            
-            if not os.path.exists(cred_file):
-                raise FileNotFoundError(f"서비스 계정 파일을 찾을 수 없습니다: {cred_file}")
-            
-            # 프로젝트 ID 추출
-            with open(cred_file, 'r') as f:
-                service_account_info = json.load(f)
-                project_id = service_account_info.get('project_id')
-                if not project_id:
-                    raise ValueError("서비스 계정 파일에 project_id가 없습니다.")
-            
-            return project_id
-                
-        except Exception as e:
-            logger.error(f"서비스 계정 인증 설정 실패: {str(e)}")
-            raise ValueError(f"Vertex AI 서비스 인증 설정에 실패했습니다: {str(e)}")
+
     
     def get_extraction_stats(self) -> Dict[str, Any]:
         """추출 통계 반환"""
