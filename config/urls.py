@@ -10,6 +10,7 @@ from drf_yasg import openapi
 api_urls = [
     path('api/v1/posts', include('apps.posts.urls')),
     path('api/v1/videos', include('apps.videos.urls')),
+    path('api/v1/avatars', include('apps.avatars.urls')),
     path('docs/', include('apps.posts.urls')),  # 더미 경로로 공통 패턴 파괴
 ]
 
@@ -28,6 +29,7 @@ schema_view = get_schema_view(
     patterns=[  # 실제 API만 포함
         path('api/v1/posts', include('apps.posts.urls')),
         path('api/v1/videos', include('apps.videos.urls')),
+        path('api/v1/avatars', include('apps.avatars.urls')),
     ],
 )
 
