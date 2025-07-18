@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 
 # ✅ .env 로드
 load_dotenv()
-print("settings.py OPENAI_API_KEY:", os.getenv("OPENAI_API_KEY"))
 
 # ✅ 프로젝트 최상위 경로
 BASE_DIR = Path(__file__).resolve().parent.parent
