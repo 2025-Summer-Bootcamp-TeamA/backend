@@ -41,12 +41,12 @@ class GoogleLoginView(APIView):
         # 2. 사용자 생성/조회
         import uuid
         User = get_user_model()
-        user, created = User.objects.get_or_create(
-            username=uuid.uuid4().hex,
-            defaults={
-                "email": email
-            }
-        )
+        user = User.objects.filter(email=email).first()
+        if not user:
+            user = User.objects.create(
+                username=uuid.uuid4().hex,
+                email=email
+            )
 
         # 3. JWT 발급
         payload = {
