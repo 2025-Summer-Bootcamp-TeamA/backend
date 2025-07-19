@@ -93,6 +93,6 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Brave MCP 설정
-BRAVE_MCP_BASE_URL = config("BRAVE_MCP_BASE_URL")
-BRAVE_API_KEY = config("BRAVE_API_KEY")
+BRAVE_MCP_BASE_URL = config("BRAVE_MCP_BASE_URL", default="")
+BRAVE_API_KEY = config("BRAVE_API_KEY", default="")
 BRAVE_MCP_PROFILE = config("BRAVE_MCP_PROFILE", default="default")

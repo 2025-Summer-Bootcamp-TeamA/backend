@@ -4,6 +4,7 @@ import re
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from .gemini_service import GeminiService
+from .brave_service import BraveSearchService
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,10 @@ class ArtworkExtractedInfo:
     extraction_method: str = "gemini_ai"
     raw_response: str = ""
     success: bool = True
+    # Brave Search 관련 필드
+    web_search_performed: bool = False
+    web_search_results: Optional[Dict] = None
+    web_enriched_description: Optional[str] = None
 
 
 class ArtworkInfoExtractor:
@@ -36,18 +41,29 @@ class ArtworkInfoExtractor:
     - JSON 구조화된 응답
     """
     
-    def __init__(self, gemini_service: Optional[GeminiService] = None):
+    def __init__(self, gemini_service: Optional[GeminiService] = None, brave_service: Optional[BraveSearchService] = None):
         """
         ArtworkInfoExtractor 초기화
         
         Args:
             gemini_service: GeminiService 인스턴스 (None이면 기본 설정으로 생성)
+            brave_service: BraveSearchService 인스턴스 (None이면 기본 설정으로 생성)
         """
         # Gemini 서비스 설정
         if gemini_service:
             self.gemini_service = gemini_service
         else:
             self.gemini_service = GeminiService()
+        
+        # Brave Search 서비스 설정
+        try:
+            if brave_service:
+                self.brave_service = brave_service
+            else:
+                self.brave_service = BraveSearchService()
+        except ValueError as e:
+            logger.warning(f"Brave Search 서비스 초기화 실패: {e}")
+            self.brave_service = None
         
         # 기본값 설정
         self.default_values = {
@@ -64,15 +80,16 @@ class ArtworkInfoExtractor:
             "failed_extractions": 0
         }
     
-    def extract_artwork_info(self, ocr_text: str) -> ArtworkExtractedInfo:
+    def extract_artwork_info(self, ocr_text: str, museum_name: Optional[str] = None) -> ArtworkExtractedInfo:
         """
-        OCR 텍스트에서 작품 정보를 추출
+        OCR 텍스트에서 작품 정보를 추출하고 웹 검색으로 보강
         
         Args:
             ocr_text: 박물관에서 촬영한 OCR 텍스트
+            museum_name: 박물관/미술관 이름 (Brave Search에 사용)
             
         Returns:
-            ArtworkExtractedInfo: 추출된 작품 정보
+            ArtworkExtractedInfo: 추출된 작품 정보 (웹 검색 결과 포함)
         """
         self.stats["total_extractions"] += 1
         
@@ -101,15 +118,18 @@ class ArtworkInfoExtractor:
                         raw_response=raw_response[:200],  # 처음 200자만 저장
                         success=True
                     )
-                    
+            
                     # 작품명 검증 - 없으면 바로 에러
                     if self._is_invalid_title(result.title):
                         raise ArtworkTitleNotFoundError(
                             f"작품명을 확인할 수 없어 저장할 수 없습니다. OCR 텍스트: {ocr_text[:50]}..."
                         )
                     
+                    # 작품명이 확인되면 웹 검색 수행
+                    enriched_result = self._perform_web_search(result, museum_name)
+                    
                     self.stats["successful_extractions"] += 1
-                    return result
+                    return enriched_result
             
             # Gemini 응답 실패 - fallback 시도
             fallback_result = self._create_fallback_result(ocr_text, "gemini_response_failed")
@@ -120,8 +140,11 @@ class ArtworkInfoExtractor:
                     f"작품명을 확인할 수 없어 저장할 수 없습니다. OCR 텍스트: {ocr_text[:50]}..."
                 )
             
+            # fallback도 작품명이 확인되면 웹 검색 수행
+            enriched_fallback = self._perform_web_search(fallback_result, museum_name)
+            
             self.stats["failed_extractions"] += 1
-            return fallback_result
+            return enriched_fallback
             
         except ArtworkTitleNotFoundError:
             # 작품명 없음 에러는 그대로 재발생
@@ -138,8 +161,11 @@ class ArtworkInfoExtractor:
                     f"작품명을 확인할 수 없어 저장할 수 없습니다. OCR 텍스트: {ocr_text[:50]}..."
                 )
             
+            # 예외 fallback도 작품명이 확인되면 웹 검색 수행
+            enriched_exception_fallback = self._perform_web_search(fallback_result, museum_name)
+            
             self.stats["failed_extractions"] += 1
-            return fallback_result
+            return enriched_exception_fallback
     
     def _build_extraction_prompt(self, ocr_text: str) -> str:
         """Gemini용 작품 정보 추출 프롬프트 구성"""
@@ -291,3 +317,125 @@ OCR 텍스트:
             "success_rate": self.stats["successful_extractions"] / total * 100,
             "failure_rate": self.stats["failed_extractions"] / total * 100
         } 
+    
+    def _perform_web_search(self, artwork_info: ArtworkExtractedInfo, museum_name: Optional[str]) -> ArtworkExtractedInfo:
+        """
+        작품 정보를 바탕으로 웹 검색을 수행하여 정보를 보강합니다.
+        
+        Args:
+            artwork_info: 기본 작품 정보
+            museum_name: 박물관/미술관 이름
+            
+        Returns:
+            ArtworkExtractedInfo: 웹 검색 결과가 포함된 작품 정보
+        """
+        # Brave Search 서비스가 없으면 원본 그대로 반환
+        if not self.brave_service:
+            logger.info("Brave Search 서비스를 사용할 수 없습니다")
+            return artwork_info
+        
+        # 박물관 이름이 없으면 작품명만으로 검색
+        if not museum_name:
+            logger.info(f"박물관 이름이 없어 작품명만으로 검색: {artwork_info.title}")
+            museum_name = ""
+        
+        try:
+            logger.info(f"웹 검색 시작: '{artwork_info.title}' at '{museum_name}'")
+            
+            # Brave Search 수행
+            search_results = self.brave_service.search_artwork(
+                artwork_title=artwork_info.title,
+                museum_name=museum_name,
+                limit=5
+            )
+            
+            if search_results.get("success") and search_results.get("results"):
+                logger.info(f"웹 검색 성공: {search_results['total_count']}개 결과")
+                
+                # 검색 스니펫 추출
+                snippets = self.brave_service.extract_search_snippets(search_results)
+                
+                # 웹 검색 정보로 설명 보강
+                enriched_description = self._enrich_description_with_web_data(
+                    original_description=artwork_info.description,
+                    snippets=snippets
+                )
+                
+                # 새로운 ArtworkExtractedInfo 생성 (기존 정보 + 웹 검색 결과)
+                return ArtworkExtractedInfo(
+                    title=artwork_info.title,
+                    artist=artwork_info.artist,
+                    year=artwork_info.year,
+                    description=artwork_info.description,  # 원본 설명 유지
+                    confidence=artwork_info.confidence,
+                    extraction_method=artwork_info.extraction_method,
+                    raw_response=artwork_info.raw_response,
+                    success=artwork_info.success,
+                    # 웹 검색 관련 필드
+                    web_search_performed=True,
+                    web_search_results=search_results,
+                    web_enriched_description=enriched_description
+                )
+            
+            else:
+                logger.info("웹 검색 결과가 없습니다")
+                # 검색했지만 결과 없음
+                return ArtworkExtractedInfo(
+                    title=artwork_info.title,
+                    artist=artwork_info.artist,
+                    year=artwork_info.year,
+                    description=artwork_info.description,
+                    confidence=artwork_info.confidence,
+                    extraction_method=artwork_info.extraction_method,
+                    raw_response=artwork_info.raw_response,
+                    success=artwork_info.success,
+                    web_search_performed=True,
+                    web_search_results=search_results,
+                    web_enriched_description=None
+                )
+        
+        except Exception as e:
+            logger.error(f"웹 검색 중 오류 발생: {str(e)}")
+            # 검색 실패해도 원본 정보는 반환
+            return ArtworkExtractedInfo(
+                title=artwork_info.title,
+                artist=artwork_info.artist,
+                year=artwork_info.year,
+                description=artwork_info.description,
+                confidence=artwork_info.confidence,
+                extraction_method=artwork_info.extraction_method,
+                raw_response=artwork_info.raw_response,
+                success=artwork_info.success,
+                web_search_performed=False,
+                web_search_results={"success": False, "error": str(e)},
+                web_enriched_description=None
+            )
+    
+    def _enrich_description_with_web_data(self, original_description: str, snippets: list) -> str:
+        """
+        웹 검색 스니펫을 사용하여 작품 설명을 보강합니다.
+        
+        Args:
+            original_description: 원본 작품 설명
+            snippets: 웹 검색에서 추출된 스니펫들
+            
+        Returns:
+            str: 보강된 설명
+        """
+        if not snippets:
+            return original_description
+        
+        # 웹 검색 정보 요약
+        web_info_summary = "\n".join(snippets[:10])  # 상위 10개 스니펫만 사용
+        
+        # 원본 설명과 웹 정보 결합
+        if original_description and original_description != self.default_values["description"]:
+            enriched = f"{original_description}\n\n[웹 검색 추가 정보]\n{web_info_summary}"
+        else:
+            enriched = f"[웹 검색 정보]\n{web_info_summary}"
+        
+        # 길이 제한 (너무 길면 자르기)
+        if len(enriched) > 2000:
+            enriched = enriched[:1900] + "\n... (추가 정보 생략)"
+        
+        return enriched
