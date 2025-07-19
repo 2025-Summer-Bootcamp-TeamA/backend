@@ -69,3 +69,5 @@ celerybeat-schedule
 # System files
 Thumbs.db
 ehthumbs.db
+
+credentials/service-account-key.json
