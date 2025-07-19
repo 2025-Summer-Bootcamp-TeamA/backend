@@ -38,4 +38,15 @@ class GoogleLoginView(APIView):
         payload = {"user_id": user.id, "sub": sub}
         jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
-        return Response({"token": jwt_token})
+        # 4. refreshToken 발급 (임시)
+        import uuid
+        refresh_token = str(uuid.uuid4())
+        # TODO: DB 연결 후 아래 코드의 주석을 해제하여 refresh_token을 User 모델에 저장하세요.
+        # user.refresh_token = refresh_token
+        # user.save()
+
+        return Response({
+            "userId": user.id,
+            "accessToken": jwt_token,
+            "refreshToken": refresh_token
+        })
