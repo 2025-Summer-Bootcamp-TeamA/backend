@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'drf_yasg',
 
     'storages'
+
+    "apps.authentication"
 ]
 
 # ✅ 미들웨어
