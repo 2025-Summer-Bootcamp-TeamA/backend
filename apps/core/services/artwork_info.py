@@ -8,6 +8,11 @@ from .gemini_service import GeminiService
 logger = logging.getLogger(__name__)
 
 
+class ArtworkTitleNotFoundError(Exception):
+    """작품명을 찾을 수 없을 때 발생하는 예외"""
+    pass
+
+
 @dataclass
 class ArtworkExtractedInfo:
     """추출된 작품 정보"""
@@ -72,11 +77,7 @@ class ArtworkInfoExtractor:
         self.stats["total_extractions"] += 1
         
         if not ocr_text or not ocr_text.strip():
-            return ArtworkExtractedInfo(
-                confidence=0.0,
-                extraction_method="input_validation_failed",
-                success=False
-            )
+            raise ArtworkTitleNotFoundError("빈 OCR 텍스트로 작품명을 확인할 수 없습니다")
         
         try:
             # Gemini AI 프롬프트 구성
@@ -90,9 +91,7 @@ class ArtworkInfoExtractor:
                 extracted_data = self._parse_gemini_response(raw_response)
                 
                 if extracted_data:
-                    self.stats["successful_extractions"] += 1
-                    
-                    return ArtworkExtractedInfo(
+                    result = ArtworkExtractedInfo(
                         title=extracted_data.get("title", self.default_values["title"]),
                         artist=extracted_data.get("artist", self.default_values["artist"]),
                         year=extracted_data.get("year", self.default_values["year"]),
@@ -102,15 +101,45 @@ class ArtworkInfoExtractor:
                         raw_response=raw_response[:200],  # 처음 200자만 저장
                         success=True
                     )
+                    
+                    # 작품명 검증 - 없으면 바로 에러
+                    if self._is_invalid_title(result.title):
+                        raise ArtworkTitleNotFoundError(
+                            f"작품명을 확인할 수 없어 저장할 수 없습니다. OCR 텍스트: {ocr_text[:50]}..."
+                        )
+                    
+                    self.stats["successful_extractions"] += 1
+                    return result
             
-            # Gemini 응답 실패
+            # Gemini 응답 실패 - fallback 시도
+            fallback_result = self._create_fallback_result(ocr_text, "gemini_response_failed")
+            
+            # 작품명 검증 - fallback도 실패하면 에러
+            if self._is_invalid_title(fallback_result.title):
+                raise ArtworkTitleNotFoundError(
+                    f"작품명을 확인할 수 없어 저장할 수 없습니다. OCR 텍스트: {ocr_text[:50]}..."
+                )
+            
             self.stats["failed_extractions"] += 1
-            return self._create_fallback_result(ocr_text, "gemini_response_failed")
+            return fallback_result
             
+        except ArtworkTitleNotFoundError:
+            # 작품명 없음 에러는 그대로 재발생
+            raise
         except Exception as e:
             logger.error(f"Gemini 추출 실패: {e}")
+            
+            # 다른 에러는 fallback 시도
+            fallback_result = self._create_fallback_result(ocr_text, f"gemini_error: {str(e)[:50]}")
+            
+            # fallback도 작품명 없으면 에러
+            if self._is_invalid_title(fallback_result.title):
+                raise ArtworkTitleNotFoundError(
+                    f"작품명을 확인할 수 없어 저장할 수 없습니다. OCR 텍스트: {ocr_text[:50]}..."
+                )
+            
             self.stats["failed_extractions"] += 1
-            return self._create_fallback_result(ocr_text, f"gemini_error: {str(e)[:50]}")
+            return fallback_result
     
     def _build_extraction_prompt(self, ocr_text: str) -> str:
         """Gemini용 작품 정보 추출 프롬프트 구성"""
@@ -223,7 +252,33 @@ OCR 텍스트:
             success=False
         )
     
-
+    def _is_invalid_title(self, title: str) -> bool:
+        """작품명이 유효하지 않은지 검사"""
+        if not title or not title.strip():
+            return True
+        
+        # 기본값들
+        if title == self.default_values["title"]:
+            return True
+        
+        # 무의미한 제목들
+        invalid_titles = [
+            "정보 없음", "정보없음", "불명", "미상", "제목없음", "무제", 
+            "???", "---", "unknown", "없음", "확인불가", "불분명"
+        ]
+        
+        if title.strip().lower() in [t.lower() for t in invalid_titles]:
+            return True
+        
+        # 너무 짧은 제목 (2글자 미만)
+        if len(title.strip()) < 2:
+            return True
+        
+        # 숫자만 있는 경우
+        if title.strip().isdigit():
+            return True
+        
+        return False
     
     def get_extraction_stats(self) -> Dict[str, Any]:
         """추출 통계 반환"""
