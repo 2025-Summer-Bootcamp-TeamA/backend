@@ -8,8 +8,8 @@ from drf_yasg import openapi
 
 # 전체 경로를 위한 URL 패턴들 - 공통 경로 제거
 api_urls = [
-    path('api/v1/posts', include('apps.posts.urls')),
-    path('api/v1/videos', include('apps.videos.urls')),
+    path('api/v1/posts/', include('apps.posts.urls')),
+    path('api/v1/videos/', include('apps.videos.urls')),
     path('docs/', include('apps.posts.urls')),  # 더미 경로로 공통 패턴 파괴
 ]
 
@@ -26,8 +26,8 @@ schema_view = get_schema_view(
     public=True,
     permission_classes=[AllowAny],
     patterns=[  # 실제 API만 포함
-        path('api/v1/posts', include('apps.posts.urls')),
-        path('api/v1/videos', include('apps.videos.urls')),
+        path('api/v1/posts/', include('apps.posts.urls')),
+        path('api/v1/videos/', include('apps.videos.urls')),
     ],
 )
 
@@ -38,7 +38,13 @@ urlpatterns = [
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),  # 루트에서도 Swagger 접근
+    path('/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),  # 루트에서도 Swagger 접근
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+urlpatterns += [
+    path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+]

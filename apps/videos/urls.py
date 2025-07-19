@@ -1,7 +1,6 @@
 from django.urls import path
-from . import views
+from .views import UserVideoListView
 
 urlpatterns = [
-    # 영상 자동 저장 엔드포인트만 유지
-    path('', views.VideoUploadView.as_view(), name='video-upload'),
+    path('', UserVideoListView.as_view(), name='user-video-list'),
 ]
