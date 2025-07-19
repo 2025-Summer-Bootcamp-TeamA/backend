@@ -3,6 +3,7 @@ Django settings for config project.
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -90,3 +91,8 @@ STATIC_URL = 'static/'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Brave MCP 설정
+BRAVE_MCP_BASE_URL = config("BRAVE_MCP_BASE_URL")
+BRAVE_API_KEY = config("BRAVE_API_KEY")
+BRAVE_MCP_PROFILE = config("BRAVE_MCP_PROFILE", default="default")
