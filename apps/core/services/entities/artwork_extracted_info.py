@@ -3,6 +3,7 @@ from apps.core.services.entities.artwork_basic_info import ArtworkBasicInfo
 from apps.core.services.entities.extraction_metadata import ExtractionMetadata
 from apps.core.services.entities.web_search_info import WebSearchInfo
 from apps.core.services.entities.content_fetch_info import ContentFetchInfo
+from apps.core.services.entities.video_script_info import VideoScriptInfo
 
 
 @dataclass
@@ -11,4 +12,5 @@ class ArtworkExtractedInfo:
     basic_info: ArtworkBasicInfo
     metadata: ExtractionMetadata
     web_search: WebSearchInfo
-    content_fetch: ContentFetchInfo 
+    content_fetch: ContentFetchInfo
+    video_script: VideoScriptInfo 
