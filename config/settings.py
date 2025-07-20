@@ -96,3 +96,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 BRAVE_MCP_BASE_URL = config("BRAVE_MCP_BASE_URL", default="")
 BRAVE_API_KEY = config("BRAVE_API_KEY", default="")
 BRAVE_MCP_PROFILE = config("BRAVE_MCP_PROFILE", default="default")
+
+# Fetch MCP 설정
+FETCH_MCP_BASE_URL = config("FETCH_MCP_BASE_URL", default="")
+FETCH_API_KEY = config("FETCH_API_KEY", default="")

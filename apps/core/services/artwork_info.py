@@ -1,10 +1,11 @@
 import json
 import logging
 import re
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from .gemini_service import GeminiService
 from .brave_service import BraveSearchService
+from .fetch_service import FetchService
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,10 @@ class ArtworkExtractedInfo:
     web_search_performed: bool = False
     web_search_results: Optional[Dict] = None
     web_enriched_description: Optional[str] = None
+    # Fetch 관련 필드
+    fetch_performed: bool = False
+    fetch_results: Optional[List[Dict]] = None
+    content_enriched_description: Optional[str] = None
 
 
 class ArtworkInfoExtractor:
@@ -41,13 +46,14 @@ class ArtworkInfoExtractor:
     - JSON 구조화된 응답
     """
     
-    def __init__(self, gemini_service: Optional[GeminiService] = None, brave_service: Optional[BraveSearchService] = None):
+    def __init__(self, gemini_service: Optional[GeminiService] = None, brave_service: Optional[BraveSearchService] = None, fetch_service: Optional[FetchService] = None):
         """
         ArtworkInfoExtractor 초기화
         
         Args:
             gemini_service: GeminiService 인스턴스 (None이면 기본 설정으로 생성)
             brave_service: BraveSearchService 인스턴스 (None이면 기본 설정으로 생성)
+            fetch_service: FetchService 인스턴스 (None이면 기본 설정으로 생성)
         """
         # Gemini 서비스 설정
         if gemini_service:
@@ -64,6 +70,16 @@ class ArtworkInfoExtractor:
         except ValueError as e:
             logger.warning(f"Brave Search 서비스 초기화 실패: {e}")
             self.brave_service = None
+        
+        # Fetch 서비스 설정
+        try:
+            if fetch_service:
+                self.fetch_service = fetch_service
+            else:
+                self.fetch_service = FetchService()
+        except ValueError as e:
+            logger.warning(f"Fetch 서비스 초기화 실패: {e}")
+            self.fetch_service = None
         
         # 기본값 설정
         self.default_values = {
@@ -361,7 +377,36 @@ OCR 텍스트:
                     snippets=snippets
                 )
                 
-                # 새로운 ArtworkExtractedInfo 생성 (기존 정보 + 웹 검색 결과)
+                # Fetch MCP로 URL 본문 가져오기
+                fetch_results = None
+                content_enriched_description = None
+                
+                if self.fetch_service:
+                    try:
+                        logger.info("Fetch MCP로 URL 본문 가져오기 시작")
+                        fetch_results = self.fetch_service.fetch_artwork_urls(search_results, max_urls=3)
+                        
+                        if fetch_results and any(r.get("success") for r in fetch_results):
+                            # Fetch 결과에서 스니펫 추출
+                            content_snippets = self.fetch_service.extract_content_snippets(fetch_results, max_snippets=5)
+                            
+                            # 본문 내용으로 추가 보강
+                            content_enriched_description = self._enrich_description_with_content_data(
+                                original_description=enriched_description,
+                                content_snippets=content_snippets
+                            )
+                            
+                            logger.info(f"Fetch 성공: {len([r for r in fetch_results if r.get('success')])}개 URL")
+                        else:
+                            logger.info("Fetch 결과가 없습니다")
+                            
+                    except Exception as e:
+                        logger.error(f"Fetch MCP 오류: {str(e)}")
+                        fetch_results = []
+                else:
+                    logger.info("Fetch 서비스를 사용할 수 없습니다")
+                
+                # 새로운 ArtworkExtractedInfo 생성 (기존 정보 + 웹 검색 + Fetch 결과)
                 return ArtworkExtractedInfo(
                     title=artwork_info.title,
                     artist=artwork_info.artist,
@@ -374,7 +419,11 @@ OCR 텍스트:
                     # 웹 검색 관련 필드
                     web_search_performed=True,
                     web_search_results=search_results,
-                    web_enriched_description=enriched_description
+                    web_enriched_description=enriched_description,
+                    # Fetch 관련 필드
+                    fetch_performed=bool(fetch_results),
+                    fetch_results=fetch_results,
+                    content_enriched_description=content_enriched_description or enriched_description
                 )
             
             else:
@@ -437,5 +486,34 @@ OCR 텍스트:
         # 길이 제한 (너무 길면 자르기)
         if len(enriched) > 2000:
             enriched = enriched[:1900] + "\n... (추가 정보 생략)"
+        
+        return enriched
+    
+    def _enrich_description_with_content_data(self, original_description: str, content_snippets: list) -> str:
+        """
+        Fetch MCP로 가져온 본문 내용을 사용하여 작품 설명을 추가 보강합니다.
+        
+        Args:
+            original_description: 원본 작품 설명 (이미 웹 검색으로 보강된 것일 수 있음)
+            content_snippets: Fetch MCP에서 추출된 본문 스니펫들
+            
+        Returns:
+            str: 본문 내용으로 추가 보강된 설명
+        """
+        if not content_snippets:
+            return original_description
+        
+        # 본문 내용 요약
+        content_summary = "\n".join(content_snippets[:5])  # 상위 5개 스니펫만 사용
+        
+        # 기존 설명과 본문 내용 결합
+        if original_description and original_description != self.default_values["description"]:
+            enriched = f"{original_description}\n\n[본문 내용 추가 정보]\n{content_summary}"
+        else:
+            enriched = f"[본문 내용 정보]\n{content_summary}"
+        
+        # 길이 제한 (너무 길면 자르기)
+        if len(enriched) > 3000:
+            enriched = enriched[:2800] + "\n... (추가 정보 생략)"
         
         return enriched
