@@ -1,7 +1,9 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
 
 class Video(models.Model):
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)  # 추가: 영상의 소유자
     title = models.CharField(max_length=100)
     artist = models.CharField(max_length=100, default="unknown")
     place_id = models.CharField(max_length=100, default="unknown")
