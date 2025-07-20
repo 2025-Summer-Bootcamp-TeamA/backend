@@ -57,8 +57,18 @@ class ContentFetchEnricher:
                 fetch_timestamp=datetime.now()
             )
         
+        # 웹 검색에서 이미 설명을 가져왔으면 Fetch 수행하지 않음
+        if web_search_info.enriched_description:
+            logger.info("웹 검색에서 이미 설명을 가져왔으므로 Fetch를 건너뜁니다")
+            return ContentFetchInfo(
+                performed=False,
+                fetch_results=None,
+                content_enriched_description=None,
+                fetch_timestamp=datetime.now()
+            )
+        
         try:
-            logger.info("Fetch MCP로 URL 본문 가져오기 시작")
+            logger.info("설명이 없어 Fetch MCP로 URL 본문 가져오기 시작")
             fetch_results = self.fetch_service.fetch_artwork_urls(web_search_info.search_results, max_urls=3)
             
             if fetch_results and any(r.get("success") for r in fetch_results):

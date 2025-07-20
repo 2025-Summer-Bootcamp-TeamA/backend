@@ -48,13 +48,23 @@ class WebSearchEnricher:
                 search_timestamp=datetime.now()
             )
         
+        # 설명이 이미 있으면 웹 검색 수행하지 않음
+        if self._has_valid_description(basic_info.description):
+            logger.info(f"설명이 이미 존재하므로 웹 검색을 건너뜁니다: {basic_info.description[:50]}...")
+            return WebSearchInfo(
+                performed=False,
+                search_results=None,
+                enriched_description=None,
+                search_timestamp=datetime.now()
+            )
+        
         # 박물관 이름이 없으면 작품명만으로 검색
         if not museum_name:
             logger.info(f"박물관 이름이 없어 작품명만으로 검색: {basic_info.title}")
             museum_name = ""
         
         try:
-            logger.info(f"웹 검색 시작: '{basic_info.title}' at '{museum_name}'")
+            logger.info(f"설명이 없어 웹 검색 시작: '{basic_info.title}' at '{museum_name}'")
             
             # Brave Search 수행
             search_results = self.brave_service.search_artwork(
@@ -128,3 +138,33 @@ class WebSearchEnricher:
             enriched = enriched[:1900] + "\n... (추가 정보 생략)"
         
         return enriched 
+    
+    def _has_valid_description(self, description: str) -> bool:
+        """
+        설명이 유효한지 확인합니다.
+        
+        Args:
+            description: 확인할 설명
+            
+        Returns:
+            bool: 유효한 설명이 있으면 True
+        """
+        if not description or not description.strip():
+            return False
+        
+        # 기본값들
+        invalid_descriptions = [
+            "정보 없음", "정보없음", "작품 설명 없음", "설명 없음", "없음",
+            "미상", "불명", "unknown", "---", "???", "불분명"
+        ]
+        
+        description_lower = description.strip().lower()
+        for invalid in invalid_descriptions:
+            if invalid.lower() in description_lower:
+                return False
+        
+        # 너무 짧은 설명 (10글자 미만)
+        if len(description.strip()) < 10:
+            return False
+        
+        return True 
