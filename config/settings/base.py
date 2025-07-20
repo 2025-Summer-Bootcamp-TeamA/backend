@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "apps.posts",
     "apps.videos",
     "rest_framework",
+    "apps.authentication",
     "drf_yasg",
 ]
 
@@ -82,4 +83,21 @@ SWAGGER_SETTINGS = {
     "DOC_EXPANSION": "none",
     "DEEP_LINKING": True,
     "SPEC_URL": None,  # basePath 자동 감지 비활성화
+}
+
+INSTALLED_APPS += ["storages"]
+
+
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+        "OPTIONS": {
+            "bucket_name": os.getenv("GS_BUCKET_NAME"),
+            # credentials는 dev.py에서 GS_CREDENTIALS로 정의됨
+            # "credentials": GS_CREDENTIALS,  # dev.py에서만 추가
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
 }
