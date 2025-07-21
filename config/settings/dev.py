@@ -28,6 +28,13 @@ BRAVE_MCP_PROFILE = config("BRAVE_MCP_PROFILE", default="default")
 # Fetch MCP 설정
 FETCH_MCP_BASE_URL = config("FETCH_MCP_BASE_URL", default="")
 FETCH_API_KEY = config("FETCH_API_KEY", default="")
+FETCH_MCP_PROFILE = config("FETCH_MCP_PROFILE", default="default")
+
+# Smithery API 설정
+SMITHERY_API_KEY = config("SMITHERY_API_KEY", default="")
+
+# VisionStory AI 설정
+VISIONSTORY_API_KEY = config("VISIONSTORY_API_KEY", default="")
 
 # Google 서비스 계정 자격증명 로딩
 google_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")

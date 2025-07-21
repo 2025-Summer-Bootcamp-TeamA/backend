@@ -14,11 +14,15 @@ class FetchService:
     """
     
     def __init__(self):
-        self.base_url = settings.FETCH_MCP_BASE_URL
-        self.api_key = settings.FETCH_API_KEY
+        self.smithery_api_key = settings.SMITHERY_API_KEY
+        self.profile = settings.FETCH_MCP_PROFILE
         
-        if not self.base_url or not self.api_key:
-            raise ValueError("Fetch MCP 설정이 누락되었습니다. FETCH_MCP_BASE_URL과 FETCH_API_KEY를 확인해주세요.")
+        if not self.smithery_api_key:
+            raise ValueError("Smithery MCP 설정이 누락되었습니다. SMITHERY_API_KEY를 확인해주세요.")
+    
+    def _get_mcp_url(self):
+        """MCP 서버 URL을 생성합니다."""
+        return f"https://server.smithery.ai/fetch-mcp/mcp?api_key={self.smithery_api_key}&profile={self.profile}"
     
     def fetch_urls(self, urls: List[str], max_concurrent: int = 3, timeout: int = 30) -> List[Dict]:
         """
@@ -116,10 +120,9 @@ class FetchService:
         """
         try:
             # MCP API 엔드포인트 구성
-            mcp_url = f"{self.base_url}/fetch"
+            mcp_url = f"{self._get_mcp_url()}/fetch"
             
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
             

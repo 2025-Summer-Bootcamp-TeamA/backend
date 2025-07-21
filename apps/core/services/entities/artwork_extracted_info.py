@@ -12,5 +12,5 @@ class ArtworkExtractedInfo:
     basic_info: ArtworkBasicInfo
     metadata: ExtractionMetadata
     web_search: WebSearchInfo
-    content_fetch: ContentFetchInfo
+    content_fetch: ContentFetchInfo 
     video_script: VideoScriptInfo 

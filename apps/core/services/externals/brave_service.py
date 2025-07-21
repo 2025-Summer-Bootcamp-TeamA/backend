@@ -1,5 +1,7 @@
 import requests
 import logging
+import json
+import base64
 from django.conf import settings
 from typing import List, Dict, Optional
 
@@ -12,12 +14,20 @@ class BraveSearchService:
     """
     
     def __init__(self):
-        self.base_url = settings.BRAVE_MCP_BASE_URL
-        self.api_key = settings.BRAVE_API_KEY
+        self.smithery_api_key = settings.SMITHERY_API_KEY
+        self.brave_api_key = settings.BRAVE_API_KEY
         self.profile = settings.BRAVE_MCP_PROFILE
         
-        if not self.base_url or not self.api_key:
-            raise ValueError("Brave MCP 설정이 누락되었습니다. BRAVE_MCP_BASE_URL과 BRAVE_API_KEY를 확인해주세요.")
+        if not self.smithery_api_key or not self.brave_api_key:
+            raise ValueError("Smithery MCP 설정이 누락되었습니다. SMITHERY_API_KEY와 BRAVE_API_KEY를 확인해주세요.")
+    
+    def _get_mcp_url(self):
+        """MCP 서버 URL을 생성합니다."""
+        config = {
+            "braveApiKey": self.brave_api_key
+        }
+        config_b64 = base64.b64encode(json.dumps(config).encode()).decode()
+        return f"https://server.smithery.ai/@smithery-ai/brave-search/mcp?config={config_b64}&api_key={self.smithery_api_key}&profile={self.profile}"
     
     def search_artwork(self, artwork_title: str, museum_name: str, limit: int = 5) -> Dict:
         """
@@ -115,20 +125,20 @@ class BraveSearchService:
         """
         try:
             # MCP API 엔드포인트 구성
-            url = f"{self.base_url}/search"
+            url = f"{self._get_mcp_url()}"
             
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Accept": "*/*"
             }
             
             payload = {
                 "query": query,
                 "count": limit,
                 "profile": self.profile,
-                "freshness": "py",  # 최신 결과 우선
-                "search_lang": "ko",  # 한국어 우선
-                "country": "KR"  # 한국 지역 우선
+                "freshness": "py",
+                "search_lang": "ko",
+                "country": "KR"
             }
             
             logger.debug(f"Brave MCP API 호출: {url}")
