@@ -1,120 +1,117 @@
-import requests
+import os
 import logging
-from django.conf import settings
+import traceback
 from typing import List, Dict, Optional
 from urllib.parse import urlparse
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 import asyncio
-import traceback
 
 logger = logging.getLogger(__name__)
 
-
 class FetchService:
     """
-    Fetch MCP를 사용하여 URL 본문을 읽어오는 서비스 (비동기)
+    Fetch MCP를 사용하여 URL 본문을 읽어오는 서비스 (Brave MCP와 동일한 비동기 방식)
     """
-    
     def __init__(self):
-        self.smithery_api_key = settings.SMITHERY_API_KEY
-        self.profile = settings.FETCH_MCP_PROFILE
-        
+        self.smithery_api_key = os.getenv("SMITHERY_API_KEY")
+        self.profile = os.getenv("FETCH_MCP_PROFILE")
         if not self.smithery_api_key:
-            raise ValueError("Smithery MCP 설정이 누락되었습니다. SMITHERY_API_KEY를 확인해주세요.")
-    
-    def _get_mcp_url(self):
-        """MCP 서버 base URL (쿼리스트링 없이)"""
-        return "https://server.smithery.ai/fetch-mcp/mcp"
+            raise ValueError("SMITHERY_API_KEY 환경변수가 필요합니다.")
+
+    def get_fetch_mcp_url(self):
+        return (
+            f"https://server.smithery.ai/fetch-mcp/mcp"
+            f"?api_key={self.smithery_api_key}&profile={self.profile}"
+        )
 
     async def fetch_url_mcp_async(self, url: str, timeout: int = 30) -> dict:
-        """
-        Fetch MCP에 streamablehttp_client로 연결하여 본문을 비동기로 받아옴 (Brave MCP와 동일한 방식)
-        """
-        mcp_url = f"https://server.smithery.ai/fetch-mcp/mcp?api_key={self.smithery_api_key}&profile={self.profile}"
-        tool_names = ["fetch_txt"]
-        for tool in tool_names:
-            try:
-                async with streamablehttp_client(mcp_url) as (read_stream, write_stream, _):
-                    async with ClientSession(read_stream, write_stream) as session:
-                        await session.initialize()
-                        logger.info(f"Fetch MCP tool 시도: {tool} for {url}")
-                        try:
-                            params = {"url": url}
-                            result = await session.call_tool(tool, params)
-                            content = getattr(result, "content", None)
-                            logger.debug(f"[DEBUG] MCP result: {result}")
-                            logger.debug(f"[DEBUG] MCP content: {content}")
-                            if isinstance(content, dict):
-                                return {
-                                    "url": url,
-                                    "success": True,
-                                    "title": content.get("title", ""),
-                                    "content": content.get("text", ""),
-                                    "text_length": len(content.get("text", "")),
-                                    "error": ""
-                                }
-                            elif isinstance(content, list):  # 리스트 오면 본문 합치기
-                                all_texts = [
-                                    getattr(item, "text", "") for item in content
-                                    if hasattr(item, "text")
-                                ]
-                                joined = "\n".join(all_texts)
-                                return {
-                                    "url": url,
-                                    "success": True,
-                                    "title": "",
-                                    "content": joined,
-                                    "text_length": len(joined),
-                                    "error": ""
-                                }
-                            elif hasattr(content, "text"):
-                                return {
-                                    "url": url,
-                                    "success": True,
-                                    "title": getattr(content, "title", ""),
-                                    "content": getattr(content, "text", ""),
-                                    "text_length": len(getattr(content, "text", "")),
-                                    "error": ""
-                                }
-                            else:
-                                logger.warning(f"Fetch MCP content 파싱 실패: {content}")
-                                continue
-                        except Exception as e:
-                            logger.error(f"Fetch MCP tool {tool} 실패: {e}")
-                            logger.error(traceback.format_exc())
-                            continue
-            except Exception as e:
-                logger.error(f"Fetch MCP async 연결 오류 {url}: {str(e)}")
-                logger.error(traceback.format_exc())
-                continue
-        return {
-            "url": url,
-            "success": False,
-            "title": "",
-            "content": "",
-            "text_length": 0,
-            "error": f"모든 MCP tool 실패"
-        }
+        mcp_url = self.get_fetch_mcp_url()
+        try:
+            async with streamablehttp_client(mcp_url) as (read_stream, write_stream, _):
+                async with ClientSession(read_stream, write_stream) as session:
+                    await session.initialize()
+                    logger.info(f"Fetch MCP tool 시도: fetch_txt for {url}")
+                    try:
+                        params = {"url": url}
+                        result = await session.call_tool("fetch_txt", params)
+                        content = getattr(result, "content", None)
+                        logger.debug(f"[DEBUG] MCP result: {result}")
+                        logger.debug(f"[DEBUG] MCP content: {content}")
+                        if isinstance(content, dict):
+                            return {
+                                "url": url,
+                                "success": True,
+                                "title": content.get("title", ""),
+                                "content": content.get("text", ""),
+                                "text_length": len(content.get("text", "")),
+                                "error": ""
+                            }
+                        elif isinstance(content, list):
+                            all_texts = [
+                                getattr(item, "text", "") for item in content
+                                if hasattr(item, "text")
+                            ]
+                            joined = "\n".join(all_texts)
+                            return {
+                                "url": url,
+                                "success": True,
+                                "title": "",
+                                "content": joined,
+                                "text_length": len(joined),
+                                "error": ""
+                            }
+                        elif hasattr(content, "text"):
+                            return {
+                                "url": url,
+                                "success": True,
+                                "title": getattr(content, "title", ""),
+                                "content": getattr(content, "text", ""),
+                                "text_length": len(getattr(content, "text", "")),
+                                "error": ""
+                            }
+                        else:
+                            logger.warning(f"Fetch MCP content 파싱 실패: {content}")
+                            return {
+                                "url": url,
+                                "success": False,
+                                "title": "",
+                                "content": "",
+                                "text_length": 0,
+                                "error": "본문 파싱 실패"
+                            }
+                    except Exception as e:
+                        logger.error(f"Fetch MCP tool fetch_txt 실패: {e}")
+                        logger.error(traceback.format_exc())
+                        return {
+                            "url": url,
+                            "success": False,
+                            "title": "",
+                            "content": "",
+                            "text_length": 0,
+                            "error": f"fetch_txt tool 실패: {e}"
+                        }
+        except Exception as e:
+            logger.error(f"Fetch MCP async 연결 오류 {url}: {str(e)}")
+            logger.error(traceback.format_exc())
+            return {
+                "url": url,
+                "success": False,
+                "title": "",
+                "content": "",
+                "text_length": 0,
+                "error": f"연결 오류: {e}"
+            }
 
     async def fetch_urls(self, urls: List[str], max_concurrent: int = 3, timeout: int = 30) -> List[Dict]:
-        """
-        여러 URL의 본문을 병렬로 가져옵니다. (비동기 MCP 방식)
-        각 URL의 성공/실패를 개별 처리
-        """
         results = []
         valid_urls = self._filter_urls(urls)
         if not valid_urls:
             logger.warning("유효한 URL이 없습니다.")
             return results
-
         logger.info(f"Fetch 시작: {len(valid_urls)}개 URL")
-
-        # 비동기 병렬 fetch (concurrency 제한은 필요하면 semaphore 사용)
-        # 단순하게 모든 url 동시에 요청 (최대 100개 넘으면 semaphore 쓰는 게 좋음)
         tasks = [self.fetch_url_mcp_async(url, timeout) for url in valid_urls]
         raw_results = await asyncio.gather(*tasks, return_exceptions=True)
-
         for url, result in zip(valid_urls, raw_results):
             if isinstance(result, Exception):
                 logger.error(f"Fetch 개별 오류 {url}: {str(result)}")
@@ -149,7 +146,7 @@ class FetchService:
         urls = [r["url"] for r in search_results["results"] if r.get("url")]
         prioritized_urls = self._prioritize_artwork_urls(urls, max_urls)
         
-        # �� 본문 fetch 없이 URL만 전달
+        # 본문 fetch 없이 URL만 전달
         return [{"url": url} for url in prioritized_urls]
 
     
