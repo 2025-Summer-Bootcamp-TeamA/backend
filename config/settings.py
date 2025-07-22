@@ -107,6 +107,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # ✅ 기본 필드 타입
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Smithery MCP 설정
+SMITHERY_API_KEY = config("SMITHERY_API_KEY", default="")
+
 # Brave MCP 설정
 BRAVE_MCP_BASE_URL = config("BRAVE_MCP_BASE_URL", default="")
 BRAVE_API_KEY = config("BRAVE_API_KEY", default="")
