@@ -73,4 +73,8 @@ class VisionStoryVideoGenerator:
     
     def get_available_voices(self) -> dict:
         """사용 가능한 음성 목록을 가져옵니다."""
-        return self.visionstory_service.get_available_voices() 
+        return self.visionstory_service.get_available_voices()
+    
+    def get_recent_videos(self) -> dict:
+        """최근 생성된 영상 목록을 가져옵니다."""
+        return self.visionstory_service.get_recent_videos() 

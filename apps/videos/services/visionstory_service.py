@@ -16,7 +16,10 @@ class VisionStoryService:
         self.api_key = os.getenv("VISIONSTORY_API_KEY")
         self.base_url = "https://openapi.visionstory.ai/api/v1"
         
+        logger.info(f"VisionStory API 초기화: API 키 설정됨={bool(self.api_key)}")
+        
         if not self.api_key:
+            logger.error("VISIONSTORY_API_KEY 환경 변수가 설정되지 않았습니다.")
             raise ValueError("VISIONSTORY_API_KEY 환경 변수가 설정되지 않았습니다.")
     
     def create_video(self, 
@@ -43,7 +46,7 @@ class VisionStoryService:
             VisionStoryVideoInfo: 생성된 영상 정보
         """
         try:
-            logger.info("VisionStory API 호출 시작")
+            logger.info(f"VisionStory API 호출 시작: avatar_id={avatar_id}, script_length={len(video_script)}")
             
             headers = {
                 "X-API-Key": self.api_key,
@@ -64,12 +67,17 @@ class VisionStoryService:
             if background_color:
                 payload["background_color"] = background_color
             
+            logger.info(f"VisionStory API 요청 URL: {self.base_url}/video")
+            logger.info(f"VisionStory API 요청 페이로드: {payload}")
+            
             response = requests.post(
                 f"{self.base_url}/video",
                 json=payload,
                 headers=headers,
                 timeout=30
             )
+            
+            logger.info(f"VisionStory API 응답: status={response.status_code}, content={response.text[:500]}")
             
             if response.status_code == 200:
                 result = response.json()
@@ -174,4 +182,29 @@ class VisionStoryService:
             
         except Exception as e:
             logger.error(f"음성 목록 조회 중 오류: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
+    def get_recent_videos(self) -> Dict[str, Any]:
+        """최근 생성된 영상 목록을 가져옵니다."""
+        try:
+            headers = {
+                "X-API-Key": self.api_key
+            }
+            
+            response = requests.get(
+                f"{self.base_url}/videos",
+                headers=headers,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"VisionStory 영상 목록 조회 성공: {len(result.get('data', {}).get('videos', []))}개")
+                return result
+            else:
+                logger.error(f"VisionStory 영상 목록 조회 실패: {response.status_code}")
+                return {"success": False, "error": "영상 목록을 가져올 수 없습니다."}
+            
+        except Exception as e:
+            logger.error(f"VisionStory 영상 목록 조회 중 오류: {str(e)}")
             return {"success": False, "error": str(e)} 
