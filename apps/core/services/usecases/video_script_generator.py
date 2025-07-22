@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 from apps.core.services.entities.artwork_extracted_info import ArtworkExtractedInfo
 from apps.core.services.entities.video_script_info import VideoScriptInfo
-from apps.core.services.externals.gemini_service import GeminiService
+from apps.core.services.externals.gemini_service import GEMINI_SERVICE
 
 logger = logging.getLogger(__name__)
 
@@ -11,17 +11,14 @@ logger = logging.getLogger(__name__)
 class VideoScriptGenerator:
     """VisionStory AI용 영상 스크립트를 생성하는 서비스"""
     
-    def __init__(self, gemini_service: Optional[GeminiService] = None):
+    def __init__(self, gemini_service: Optional[object] = None):
         """
         VideoScriptGenerator 초기화
         
         Args:
-            gemini_service: GeminiService 인스턴스 (None이면 기본 설정으로 생성)
+            gemini_service: GeminiService 인스턴스 (None이면 전역 싱글톤 인스턴스 사용)
         """
-        if gemini_service:
-            self.gemini_service = gemini_service
-        else:
-            self.gemini_service = GeminiService()
+        self.gemini_service = gemini_service or GEMINI_SERVICE
     
     def generate_video_script(self, artwork_info: ArtworkExtractedInfo) -> VideoScriptInfo:
         """
@@ -159,4 +156,4 @@ class VideoScriptGenerator:
             generation_method="fallback_template",
             generation_timestamp=datetime.now(),
             success=True
-        ) 
+        )

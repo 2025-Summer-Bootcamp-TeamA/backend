@@ -5,10 +5,9 @@ from datetime import datetime
 from typing import Optional, Dict
 from apps.core.services.entities.artwork_basic_info import ArtworkBasicInfo
 from apps.core.services.entities.extraction_metadata import ExtractionMetadata
-from apps.core.services.externals.gemini_service import GeminiService
+from apps.core.services.externals.gemini_service import GEMINI_SERVICE
 
 logger = logging.getLogger(__name__)
-
 
 class ArtworkTitleNotFoundError(Exception):
     """작품명을 찾을 수 없을 때 발생하는 예외"""
@@ -18,17 +17,14 @@ class ArtworkTitleNotFoundError(Exception):
 class BasicArtworkExtractor:
     """OCR에서 기본 작품 정보만 추출하는 서비스"""
     
-    def __init__(self, gemini_service: Optional[GeminiService] = None):
+    def __init__(self, gemini_service: Optional[object] = None):
         """
         BasicArtworkExtractor 초기화
         
         Args:
             gemini_service: GeminiService 인스턴스 (None이면 기본 설정으로 생성)
         """
-        if gemini_service:
-            self.gemini_service = gemini_service
-        else:
-            self.gemini_service = GeminiService()
+        self.gemini_service = gemini_service or GEMINI_SERVICE
         
         # 기본값 설정
         self.default_values = {

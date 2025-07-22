@@ -174,3 +174,5 @@ class GeminiService:
             "project_id": self.project_id,
             "location": self.location
         }
+    
+GEMINI_SERVICE = GeminiService()
