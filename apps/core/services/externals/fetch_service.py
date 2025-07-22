@@ -86,7 +86,7 @@ class FetchService:
         Brave Search 결과에서 URL을 추출하여 본문을 가져옵니다.
         
         Args:
-            search_results: brave_search.search_artwork() 결과
+            search_results: BraveSearchService.search_artwork() 결과
             max_urls: 가져올 최대 URL 수
             
         Returns:
