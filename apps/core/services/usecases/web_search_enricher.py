@@ -42,7 +42,7 @@ class WebSearchEnricher:
                         urls.append(item)
 
             if urls:
-                fetch_results = self.fetch_service.fetch_urls(urls, max_concurrent=3, timeout=30)
+                fetch_results = asyncio.run(self.fetch_service.fetch_urls(urls, max_concurrent=3, timeout=30))
                 snippets = self.fetch_service.extract_content_snippets(fetch_results, max_snippets=10)
                 enriched_description = self._enrich_description_with_web_data(basic_info.description, snippets)
                 return WebSearchInfo(performed=True, search_results=search_results, enriched_description=enriched_description, search_timestamp=datetime.now())

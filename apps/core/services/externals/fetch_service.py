@@ -1,16 +1,19 @@
 import requests
 import logging
 from django.conf import settings
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional
 from urllib.parse import urlparse
-import time
+from mcp.client.session import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+import asyncio
+import traceback
 
 logger = logging.getLogger(__name__)
 
 
 class FetchService:
     """
-    Fetch MCP를 사용하여 URL 본문을 읽어오는 서비스
+    Fetch MCP를 사용하여 URL 본문을 읽어오는 서비스 (비동기)
     """
     
     def __init__(self):
@@ -21,91 +24,134 @@ class FetchService:
             raise ValueError("Smithery MCP 설정이 누락되었습니다. SMITHERY_API_KEY를 확인해주세요.")
     
     def _get_mcp_url(self):
-        """MCP 서버 URL을 생성합니다."""
-        return f"https://server.smithery.ai/fetch-mcp/mcp?api_key={self.smithery_api_key}&profile={self.profile}"
-    
-    def fetch_urls(self, urls: List[str], max_concurrent: int = 3, timeout: int = 30) -> List[Dict]:
+        """MCP 서버 base URL (쿼리스트링 없이)"""
+        return "https://server.smithery.ai/fetch-mcp/mcp"
+
+    async def fetch_url_mcp_async(self, url: str, timeout: int = 30) -> dict:
         """
-        여러 URL의 본문을 병렬로 가져옵니다.
-        
-        Args:
-            urls: 가져올 URL 리스트
-            max_concurrent: 동시 요청 수 (기본 3개)
-            timeout: 요청 타임아웃 (초)
-            
-        Returns:
-            List[Dict]: 각 URL의 본문 정보
-            {
-                "url": str,
-                "success": bool,
-                "title": str,
-                "content": str,
-                "text_length": int,
-                "error": str (실패 시)
-            }
+        Fetch MCP에 streamablehttp_client로 연결하여 본문을 비동기로 받아옴 (Brave MCP와 동일한 방식)
+        """
+        mcp_url = f"https://server.smithery.ai/fetch-mcp/mcp?api_key={self.smithery_api_key}&profile={self.profile}"
+        tool_names = ["fetch_txt"]
+        for tool in tool_names:
+            try:
+                async with streamablehttp_client(mcp_url) as (read_stream, write_stream, _):
+                    async with ClientSession(read_stream, write_stream) as session:
+                        await session.initialize()
+                        logger.info(f"Fetch MCP tool 시도: {tool} for {url}")
+                        try:
+                            params = {"url": url}
+                            result = await session.call_tool(tool, params)
+                            content = getattr(result, "content", None)
+                            logger.debug(f"[DEBUG] MCP result: {result}")
+                            logger.debug(f"[DEBUG] MCP content: {content}")
+                            if isinstance(content, dict):
+                                return {
+                                    "url": url,
+                                    "success": True,
+                                    "title": content.get("title", ""),
+                                    "content": content.get("text", ""),
+                                    "text_length": len(content.get("text", "")),
+                                    "error": ""
+                                }
+                            elif isinstance(content, list):  # 리스트 오면 본문 합치기
+                                all_texts = [
+                                    getattr(item, "text", "") for item in content
+                                    if hasattr(item, "text")
+                                ]
+                                joined = "\n".join(all_texts)
+                                return {
+                                    "url": url,
+                                    "success": True,
+                                    "title": "",
+                                    "content": joined,
+                                    "text_length": len(joined),
+                                    "error": ""
+                                }
+                            elif hasattr(content, "text"):
+                                return {
+                                    "url": url,
+                                    "success": True,
+                                    "title": getattr(content, "title", ""),
+                                    "content": getattr(content, "text", ""),
+                                    "text_length": len(getattr(content, "text", "")),
+                                    "error": ""
+                                }
+                            else:
+                                logger.warning(f"Fetch MCP content 파싱 실패: {content}")
+                                continue
+                        except Exception as e:
+                            logger.error(f"Fetch MCP tool {tool} 실패: {e}")
+                            logger.error(traceback.format_exc())
+                            continue
+            except Exception as e:
+                logger.error(f"Fetch MCP async 연결 오류 {url}: {str(e)}")
+                logger.error(traceback.format_exc())
+                continue
+        return {
+            "url": url,
+            "success": False,
+            "title": "",
+            "content": "",
+            "text_length": 0,
+            "error": f"모든 MCP tool 실패"
+        }
+
+    async def fetch_urls(self, urls: List[str], max_concurrent: int = 3, timeout: int = 30) -> List[Dict]:
+        """
+        여러 URL의 본문을 병렬로 가져옵니다. (비동기 MCP 방식)
+        각 URL의 성공/실패를 개별 처리
         """
         results = []
-        
-        # URL 필터링 (중복 제거, 유효성 검사)
         valid_urls = self._filter_urls(urls)
-        
         if not valid_urls:
             logger.warning("유효한 URL이 없습니다.")
             return results
-        
+
         logger.info(f"Fetch 시작: {len(valid_urls)}개 URL")
-        
-        # 병렬로 URL 가져오기
-        for i in range(0, len(valid_urls), max_concurrent):
-            batch = valid_urls[i:i + max_concurrent]
-            
-            for url in batch:
-                try:
-                    result = self._fetch_single_url(url, timeout)
-                    results.append(result)
-                    
-                    # 요청 간 간격 (서버 부하 방지)
-                    time.sleep(0.5)
-                    
-                except Exception as e:
-                    logger.error(f"URL 가져오기 실패 {url}: {str(e)}")
-                    results.append({
-                        "url": url,
-                        "success": False,
-                        "title": "",
-                        "content": "",
-                        "text_length": 0,
-                        "error": str(e)
-                    })
-        
+
+        # 비동기 병렬 fetch (concurrency 제한은 필요하면 semaphore 사용)
+        # 단순하게 모든 url 동시에 요청 (최대 100개 넘으면 semaphore 쓰는 게 좋음)
+        tasks = [self.fetch_url_mcp_async(url, timeout) for url in valid_urls]
+        raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        for url, result in zip(valid_urls, raw_results):
+            if isinstance(result, Exception):
+                logger.error(f"Fetch 개별 오류 {url}: {str(result)}")
+                results.append({
+                    "url": url,
+                    "success": False,
+                    "title": "",
+                    "content": "",
+                    "text_length": 0,
+                    "error": f"개별 요청 오류: {str(result)}"
+                })
+            else:
+                results.append(result)
         logger.info(f"Fetch 완료: {len([r for r in results if r['success']])}개 성공")
         return results
-    
+
     def fetch_artwork_urls(self, search_results: Dict, max_urls: int = 5) -> List[Dict]:
         """
-        Brave Search 결과에서 URL을 추출하여 본문을 가져옵니다.
-        
+        Brave Search 결과에서 URL을 추출하여 정제된 URL 리스트만 리턴합니다.
+
         Args:
             search_results: BraveSearchService.search_artwork() 결과
             max_urls: 가져올 최대 URL 수
-            
+
         Returns:
-            List[Dict]: 각 URL의 본문 정보
+            List[Dict]: {"url": 정제된 URL} 형태의 리스트
         """
         if not search_results.get("success") or not search_results.get("results"):
             logger.warning("검색 결과가 없습니다.")
             return []
-        
-        # URL 추출
-        urls = []
-        for result in search_results["results"]:
-            if result.get("url"):
-                urls.append(result["url"])
-        
-        # 우선순위에 따라 URL 필터링
+
+        urls = [r["url"] for r in search_results["results"] if r.get("url")]
         prioritized_urls = self._prioritize_artwork_urls(urls, max_urls)
         
-        return self.fetch_urls(prioritized_urls)
+        # �� 본문 fetch 없이 URL만 전달
+        return [{"url": url} for url in prioritized_urls]
+
     
     def _fetch_single_url(self, url: str, timeout: int) -> Dict:
         """
@@ -119,13 +165,16 @@ class FetchService:
             Dict: URL 본문 정보
         """
         try:
-            # MCP API 엔드포인트 구성
+            # MCP API 엔드포인트 구성 (쿼리스트링은 params로 전달)
             mcp_url = f"{self._get_mcp_url()}/fetch"
-            
-            headers = {
-                "Content-Type": "application/json"
+            params = {
+                "api_key": self.smithery_api_key,
+                "profile": self.profile
             }
-            
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
             payload = {
                 "url": url,
                 "timeout": timeout,
@@ -134,16 +183,14 @@ class FetchService:
                 "clean_html": True,
                 "max_length": 10000  # 최대 10KB
             }
-            
             logger.debug(f"Fetch MCP API 호출: {url}")
-            
             response = requests.post(
                 mcp_url,
+                params=params,
                 json=payload,
                 headers=headers,
                 timeout=timeout + 10  # MCP API 타임아웃
             )
-            
             response.raise_for_status()
             result = response.json()
             
