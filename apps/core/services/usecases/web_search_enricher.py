@@ -22,21 +22,31 @@ class WebSearchEnricher:
             return WebSearchInfo(
                 performed=False,
                 search_results=None,
-                description=None,
+                description="정보를 찾을 수 없습니다.",
                 enriched_description=None,
                 search_timestamp=datetime.now()
             )
 
+        # 1. OCR 설명이 있으면 Gemini로 오타 보정만 수행
         if self._has_valid_description(basic_info.description):
             logger.info(f"설명이 이미 존재하므로 웹 검색을 건너뜁니다: {basic_info.description[:50]}...")
+            # Gemini로 오타/문장 보정
+            prompt = (
+                f"아래는 OCR로 추출한 작품 설명입니다. 오타, 띄어쓰기, 문장 부호, 어색한 표현을 자연스럽게 보정해 주세요.\n"
+                f"---\n{basic_info.description}\n---\n"
+                "보정된 설명만 출력하세요."
+            )
+            gemini_description = self.gemini_service.generate_content(prompt)
+            enriched_description = gemini_description or basic_info.description
             return WebSearchInfo(
                 performed=False,
                 search_results=None,
-                description=basic_info.description,
-                enriched_description=basic_info.description,
+                description=enriched_description,
+                enriched_description=enriched_description,
                 search_timestamp=datetime.now()
             )
 
+        # 2. 설명이 없으면 fetch MCP + Gemini 요약
         if not museum_name:
             museum_name = ""
         query = f"{basic_info.title} {museum_name}".strip()
@@ -44,8 +54,6 @@ class WebSearchEnricher:
 
         try:
             search_results = asyncio.run(self.brave_service(query, count=5))
-
-            # Brave Search에서 URL만 받아오므로, Fetch MCP로 본문을 가져와 snippet 생성
             urls = []
             if search_results.get("results"):
                 for item in search_results["results"]:
@@ -84,7 +92,6 @@ class WebSearchEnricher:
                     enriched_description=None,
                     search_timestamp=datetime.now()
                 )
-
         except Exception as e:
             logger.error(f"웹 검색 중 오류 발생: {e}")
             return WebSearchInfo(

@@ -63,9 +63,21 @@ class ArtworkInfoOrchestrator:
             logger.info("2단계: 웹 검색 보강")
             web_search_info = self.web_enricher.enrich_with_web_search(basic_info, museum_name)
             
-            # 3단계: 콘텐츠 Fetch 보강
+            # 3단계: 콘텐츠 Fetch 보강 (웹 검색이 수행된 경우만)
             logger.info("3단계: 콘텐츠 Fetch 보강")
-            content_fetch_info = self.content_enricher.enrich_with_content_fetch(web_search_info)
+            if web_search_info.performed and web_search_info.search_results:
+                logger.info("웹 검색이 수행되었으므로 Fetch 보강을 진행합니다")
+                content_fetch_info = self.content_enricher.enrich_with_content_fetch(web_search_info)
+            else:
+                logger.info("웹 검색이 수행되지 않았으므로 Fetch 보강을 건너뜁니다 (OCR 설명 존재)")
+                from apps.core.services.entities.content_fetch_info import ContentFetchInfo
+                from datetime import datetime
+                content_fetch_info = ContentFetchInfo(
+                    performed=False,
+                    fetch_results=None,
+                    content_enriched_description=None,
+                    fetch_timestamp=datetime.now()
+                )
             
             # 4단계: 영상 스크립트 생성
             logger.info("4단계: 영상 스크립트 생성")

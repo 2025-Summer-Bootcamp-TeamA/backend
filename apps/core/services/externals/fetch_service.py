@@ -130,24 +130,29 @@ class FetchService:
 
     def fetch_artwork_urls(self, search_results: Dict, max_urls: int = 5) -> List[Dict]:
         """
-        Brave Search 결과에서 URL을 추출하여 정제된 URL 리스트만 리턴합니다.
+        Brave Search 결과에서 URL을 추출하여 실제로 fetch MCP로 본문을 가져옵니다.
 
         Args:
             search_results: BraveSearchService.search_artwork() 결과
             max_urls: 가져올 최대 URL 수
 
         Returns:
-            List[Dict]: {"url": 정제된 URL} 형태의 리스트
+            List[Dict]: fetch MCP 결과 (success, content 등 포함)
         """
-        if not search_results.get("success") or not search_results.get("results"):
+        if not search_results or not search_results.get("results"):
             logger.warning("검색 결과가 없습니다.")
             return []
 
-        urls = [r["url"] for r in search_results["results"] if r.get("url")]
+        urls = [r for r in search_results["results"] if isinstance(r, str)]
+        if not urls:
+            # results가 dict 형태인 경우 URL 추출
+            urls = [r.get("url") for r in search_results["results"] if isinstance(r, dict) and r.get("url")]
+        
         prioritized_urls = self._prioritize_artwork_urls(urls, max_urls)
         
-        # 본문 fetch 없이 URL만 전달
-        return [{"url": url} for url in prioritized_urls]
+        # 실제로 fetch MCP를 호출하여 본문을 가져옵니다
+        logger.info(f"실제 fetch MCP 호출: {len(prioritized_urls)}개 URL")
+        return asyncio.run(self.fetch_urls(prioritized_urls, max_concurrent=3, timeout=30))
 
     
     def _fetch_single_url(self, url: str, timeout: int) -> Dict:

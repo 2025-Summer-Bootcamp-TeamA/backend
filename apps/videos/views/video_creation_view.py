@@ -46,12 +46,10 @@ class VideoCreationView(APIView):
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'title': openapi.Schema(type=openapi.TYPE_STRING, description='영상 제목', example='모나리자'),
-                        'artist': openapi.Schema(type=openapi.TYPE_STRING, description='아티스트명', example='레오나르도 다 빈치'),
                         'thumbnailUrl': openapi.Schema(type=openapi.TYPE_STRING, description='썸네일 URL', example='https://example.com/thumbnails/video_001.jpg'),
                         'videoUrl': openapi.Schema(type=openapi.TYPE_STRING, description='영상 URL', example='https://example.com/videos/video_001.mp4'),
                         'duration': openapi.Schema(type=openapi.TYPE_INTEGER, description='영상 길이(초)', example=180),
-                        'artworkInfo': openapi.Schema(type=openapi.TYPE_OBJECT, description='추출된 작품 정보'),
+                        'artworkInfo': openapi.Schema(type=openapi.TYPE_OBJECT, description='추출된 작품 정보 (title, artist, description, videoScript 포함)'),
                     }
                 )
             ),
@@ -99,8 +97,6 @@ class VideoCreationView(APIView):
             
             # 4단계: 응답 데이터 구성
             response_data = {
-                'title': artwork_info.basic_info.title,
-                'artist': artwork_info.basic_info.artist,
                 'videoUrl': video_info.video_url,
                 'thumbnailUrl': video_info.thumbnail_url,
                 'duration': video_info.duration,

@@ -30,12 +30,6 @@ class ContentFetchEnricher:
     def enrich_with_content_fetch(self, web_search_info: WebSearchInfo) -> ContentFetchInfo:
         """
         웹 검색 결과를 바탕으로 URL 본문을 가져와서 정보를 보강합니다.
-        
-        Args:
-            web_search_info: 웹 검색 결과 정보
-            
-        Returns:
-            ContentFetchInfo: Fetch 결과 정보
         """
         # Fetch 서비스가 없으면 빈 결과 반환
         if not self.fetch_service:
@@ -46,7 +40,6 @@ class ContentFetchEnricher:
                 content_enriched_description=None,
                 fetch_timestamp=datetime.now()
             )
-        
         # 웹 검색이 수행되지 않았거나 결과가 없으면 빈 결과 반환
         if not web_search_info.performed or not web_search_info.search_results:
             logger.info("웹 검색 결과가 없어 Fetch를 수행할 수 없습니다")
@@ -56,33 +49,18 @@ class ContentFetchEnricher:
                 content_enriched_description=None,
                 fetch_timestamp=datetime.now()
             )
-        
-        # 웹 검색에서 이미 설명을 가져왔으면 Fetch 수행하지 않음
-        if web_search_info.enriched_description:
-            logger.info("웹 검색에서 이미 설명을 가져왔으므로 Fetch를 건너뜁니다")
-            return ContentFetchInfo(
-                performed=False,
-                fetch_results=None,
-                content_enriched_description=None,
-                fetch_timestamp=datetime.now()
-            )
-        
+        # Brave Search에서 스니펫이 아닌 url만 사용하도록 fetch_artwork_urls 호출
+        # Fetch를 무조건 시도 (enriched_description 유무와 무관)
         try:
-            logger.info("설명이 없어 Fetch MCP로 URL 본문 가져오기 시작")
+            logger.info("Fetch MCP로 URL 본문 가져오기 시작 (enriched_description 유무와 무관)")
             fetch_results = self.fetch_service.fetch_artwork_urls(web_search_info.search_results, max_urls=3)
-            
             if fetch_results and any(r.get("success") for r in fetch_results):
-                # Fetch 결과에서 스니펫 추출
                 content_snippets = self.fetch_service.extract_content_snippets(fetch_results, max_snippets=5)
-                
-                # 본문 내용으로 추가 보강
                 content_enriched_description = self._enrich_description_with_content_data(
                     original_description=web_search_info.enriched_description,
                     content_snippets=content_snippets
                 )
-                
                 logger.info(f"Fetch 성공: {len([r for r in fetch_results if r.get('success')])}개 URL")
-                
                 return ContentFetchInfo(
                     performed=True,
                     fetch_results=fetch_results,
@@ -97,7 +75,6 @@ class ContentFetchEnricher:
                     content_enriched_description=None,
                     fetch_timestamp=datetime.now()
                 )
-                
         except Exception as e:
             logger.error(f"Fetch MCP 오류: {str(e)}")
             return ContentFetchInfo(

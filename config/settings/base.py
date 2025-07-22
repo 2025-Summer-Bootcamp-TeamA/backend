@@ -101,3 +101,33 @@ STORAGES = {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
+
+# 로깅 설정
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        # HTTP 요청 로그 끄기
+        'httpx': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+        },
+        'httpcore': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+        },
+        'urllib3': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+        },
+        'requests': {
+            'level': 'WARNING',
+            'handlers': ['console'],
+        },
+    },
+}
