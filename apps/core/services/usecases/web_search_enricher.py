@@ -4,24 +4,38 @@ from apps.core.services.entities.artwork_basic_info import ArtworkBasicInfo
 from apps.core.services.entities.web_search_info import WebSearchInfo
 from apps.core.services.externals.brave_service import brave_search
 from apps.core.services.externals.fetch_service import FetchService
+from apps.core.services.externals.gemini_service import GEMINI_SERVICE
 import asyncio
 import logging
 
 logger = logging.getLogger(__name__)
 
 class WebSearchEnricher:
-    def __init__(self, brave_service: Optional[callable] = None, fetch_service: Optional[FetchService] = None):
+    def __init__(self, brave_service: Optional[callable] = None, fetch_service: Optional[FetchService] = None, gemini_service: Optional[GEMINI_SERVICE] = None):
         self.brave_service = brave_service or brave_search
         self.fetch_service = fetch_service or FetchService()
+        self.gemini_service = gemini_service or GEMINI_SERVICE
 
     def enrich_with_web_search(self, basic_info: ArtworkBasicInfo, museum_name: Optional[str]) -> WebSearchInfo:
         if not self.brave_service:
             logger.info("Brave Search 서비스를 사용할 수 없습니다")
-            return WebSearchInfo(performed=False, search_results=None, enriched_description=None, search_timestamp=datetime.now())
+            return WebSearchInfo(
+                performed=False,
+                search_results=None,
+                description=None,
+                enriched_description=None,
+                search_timestamp=datetime.now()
+            )
 
         if self._has_valid_description(basic_info.description):
             logger.info(f"설명이 이미 존재하므로 웹 검색을 건너뜁니다: {basic_info.description[:50]}...")
-            return WebSearchInfo(performed=False, search_results=None, enriched_description=None, search_timestamp=datetime.now())
+            return WebSearchInfo(
+                performed=False,
+                search_results=None,
+                description=basic_info.description,
+                enriched_description=basic_info.description,
+                search_timestamp=datetime.now()
+            )
 
         if not museum_name:
             museum_name = ""
@@ -34,7 +48,6 @@ class WebSearchEnricher:
             # Brave Search에서 URL만 받아오므로, Fetch MCP로 본문을 가져와 snippet 생성
             urls = []
             if search_results.get("results"):
-                # Brave MCP가 dict의 list 또는 str의 list를 반환할 수 있음
                 for item in search_results["results"]:
                     if isinstance(item, dict) and item.get("url"):
                         urls.append(item["url"])
@@ -43,16 +56,44 @@ class WebSearchEnricher:
 
             if urls:
                 fetch_results = asyncio.run(self.fetch_service.fetch_urls(urls, max_concurrent=3, timeout=30))
-                snippets = self.fetch_service.extract_content_snippets(fetch_results, max_snippets=10)
-                enriched_description = self._enrich_description_with_web_data(basic_info.description, snippets)
-                return WebSearchInfo(performed=True, search_results=search_results, enriched_description=enriched_description, search_timestamp=datetime.now())
+                all_contents = [r["content"] for r in fetch_results if r.get("success") and r.get("content")]
+                if all_contents:
+                    prompt = (
+                        f"다음은 '{basic_info.title}' 작품에 대한 다양한 웹 본문입니다.\n"
+                        "이 정보들을 참고하여, 관람객이 이해하기 쉽고 풍부한 작품 설명을 500자 이내로 써주세요.\n\n"
+                    )
+                    for i, content in enumerate(all_contents, 1):
+                        prompt += f"[자료 {i}]\n{content[:1000]}\n\n"
+                    gemini_description = self.gemini_service.generate_content(prompt)
+                    enriched_description = gemini_description or "정보를 찾을 수 없습니다."
+                else:
+                    enriched_description = "정보를 찾을 수 없습니다."
+                return WebSearchInfo(
+                    performed=True,
+                    search_results=search_results,
+                    description=enriched_description,
+                    enriched_description=enriched_description,
+                    search_timestamp=datetime.now()
+                )
             else:
                 logger.info("검색 결과가 없습니다.")
-                return WebSearchInfo(performed=True, search_results=search_results, enriched_description=None, search_timestamp=datetime.now())
+                return WebSearchInfo(
+                    performed=True,
+                    search_results=search_results,
+                    description="정보를 찾을 수 없습니다.",
+                    enriched_description=None,
+                    search_timestamp=datetime.now()
+                )
 
         except Exception as e:
             logger.error(f"웹 검색 중 오류 발생: {e}")
-            return WebSearchInfo(performed=False, search_results={"success": False, "error": str(e)}, enriched_description=None, search_timestamp=datetime.now())
+            return WebSearchInfo(
+                performed=False,
+                search_results={"success": False, "error": str(e)},
+                description="정보를 찾을 수 없습니다.",
+                enriched_description=None,
+                search_timestamp=datetime.now()
+            )
 
     def _enrich_description_with_web_data(self, original_description: str, snippets: list) -> str:
         if not snippets:
