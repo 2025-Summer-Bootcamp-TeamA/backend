@@ -9,6 +9,17 @@ import asyncio
 
 logger = logging.getLogger(__name__)
 
+
+class MCPConnectionError(Exception):
+    """MCP 연결 관련 오류"""
+    pass
+
+
+class MCPToolError(Exception):
+    """MCP 도구 실행 관련 오류"""
+    pass
+
+
 class FetchService:
     """
     Fetch MCP를 사용하여 URL 본문을 읽어오는 서비스 (Brave MCP와 동일한 비동기 방식)
@@ -18,6 +29,10 @@ class FetchService:
         self.profile = os.getenv("FETCH_MCP_PROFILE")
         if not self.smithery_api_key:
             raise ValueError("SMITHERY_API_KEY 환경변수가 필요합니다.")
+        
+        # MCP 연결 재시도 설정
+        self.max_retries = 3
+        self.retry_delay = 1.0  # 초
 
     def get_fetch_mcp_url(self):
         return (
@@ -26,86 +41,113 @@ class FetchService:
         )
 
     async def fetch_url_mcp_async(self, url: str, timeout: int = 30) -> dict:
+        """
+        단일 URL의 MCP 비동기 처리 (재시도 로직 포함)
+        
+        Args:
+            url: 가져올 URL
+            timeout: 요청 타임아웃
+            
+        Returns:
+            Dict: 처리 결과
+        """
         mcp_url = self.get_fetch_mcp_url()
+        
+        for attempt in range(self.max_retries):
+            try:
+                return await self._fetch_single_attempt(mcp_url, url, timeout)
+            except MCPConnectionError as e:
+                if attempt == self.max_retries - 1:
+                    logger.error(f"MCP 연결 최종 실패 ({url}): {e}")
+                    return self._create_error_response(url, f"연결 오류: {e}")
+                else:
+                    logger.warning(f"MCP 연결 재시도 {attempt + 1}/{self.max_retries} ({url}): {e}")
+                    await asyncio.sleep(self.retry_delay * (attempt + 1))
+            except MCPToolError as e:
+                logger.error(f"MCP 도구 실행 오류 ({url}): {e}")
+                return self._create_error_response(url, f"도구 실행 오류: {e}")
+            except Exception as e:
+                logger.error(f"MCP 예상치 못한 오류 ({url}): {e}")
+                logger.error(traceback.format_exc())
+                return self._create_error_response(url, f"예상치 못한 오류: {e}")
+        
+        return self._create_error_response(url, "최대 재시도 횟수 초과")
+
+    async def _fetch_single_attempt(self, mcp_url: str, url: str, timeout: int) -> dict:
+        """단일 MCP 요청 시도"""
         try:
             async with streamablehttp_client(mcp_url) as (read_stream, write_stream, _):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
-                    logger.info(f"Fetch MCP tool 시도: fetch_txt for {url}")
-                    try:
-                        params = {"url": url}
-                        result = await session.call_tool("fetch_txt", params)
-                        content = getattr(result, "content", None)
-                        logger.debug(f"[DEBUG] MCP result: {result}")
-                        logger.debug(f"[DEBUG] MCP content: {content}")
-                        if isinstance(content, dict):
-                            return {
-                                "url": url,
-                                "success": True,
-                                "title": content.get("title", ""),
-                                "content": content.get("text", ""),
-                                "text_length": len(content.get("text", "")),
-                                "error": ""
-                            }
-                        elif isinstance(content, list):
-                            all_texts = [
-                                getattr(item, "text", "") for item in content
-                                if hasattr(item, "text")
-                            ]
-                            joined = "\n".join(all_texts)
-                            return {
-                                "url": url,
-                                "success": True,
-                                "title": "",
-                                "content": joined,
-                                "text_length": len(joined),
-                                "error": ""
-                            }
-                        elif hasattr(content, "text"):
-                            return {
-                                "url": url,
-                                "success": True,
-                                "title": getattr(content, "title", ""),
-                                "content": getattr(content, "text", ""),
-                                "text_length": len(getattr(content, "text", "")),
-                                "error": ""
-                            }
-                        else:
-                            logger.warning(f"Fetch MCP content 파싱 실패: {content}")
-                            return {
-                                "url": url,
-                                "success": False,
-                                "title": "",
-                                "content": "",
-                                "text_length": 0,
-                                "error": "본문 파싱 실패"
-                            }
-                    except Exception as e:
-                        # 502 등 서버 오류는 경고 레벨로 처리 (너무 시끄럽지 않게)
-                        if "502 Bad Gateway" in str(e) or "BrokenResourceError" in str(e):
-                            logger.warning(f"Fetch MCP 서버 오류 (일시적): {url} - {e}")
-                        else:
-                            logger.error(f"Fetch MCP tool fetch_txt 실패: {e}")
-                            logger.error(traceback.format_exc())
-                        return {
-                            "url": url,
-                            "success": False,
-                            "title": "",
-                            "content": "",
-                            "text_length": 0,
-                            "error": f"fetch_txt tool 실패: {e}"
-                        }
+                    logger.debug(f"MCP 세션 초기화 완료: {url}")
+                    
+                    params = {"url": url}
+                    result = await session.call_tool("fetch_txt", params)
+                    content = getattr(result, "content", None)
+                    
+                    logger.debug(f"MCP 도구 실행 완료: {url}")
+                    return self._process_mcp_result(url, content)
+                    
+        except ConnectionError as e:
+            raise MCPConnectionError(f"MCP 서버 연결 실패: {e}")
+        except TimeoutError as e:
+            raise MCPConnectionError(f"MCP 연결 타임아웃: {e}")
         except Exception as e:
-            logger.error(f"Fetch MCP async 연결 오류 {url}: {str(e)}")
-            logger.error(traceback.format_exc())
+            if "502 Bad Gateway" in str(e) or "BrokenResourceError" in str(e):
+                raise MCPConnectionError(f"MCP 서버 일시적 오류: {e}")
+            elif "tool" in str(e).lower():
+                raise MCPToolError(f"fetch_txt 도구 실행 실패: {e}")
+            else:
+                raise
+
+    def _process_mcp_result(self, url: str, content) -> dict:
+        """MCP 결과 처리"""
+        if isinstance(content, dict):
             return {
                 "url": url,
-                "success": False,
-                "title": "",
-                "content": "",
-                "text_length": 0,
-                "error": f"연결 오류: {e}"
+                "success": True,
+                "title": content.get("title", ""),
+                "content": content.get("text", ""),
+                "text_length": len(content.get("text", "")),
+                "error": ""
             }
+        elif isinstance(content, list):
+            all_texts = [
+                getattr(item, "text", "") for item in content
+                if hasattr(item, "text")
+            ]
+            joined = "\n".join(all_texts)
+            return {
+                "url": url,
+                "success": True,
+                "title": "",
+                "content": joined,
+                "text_length": len(joined),
+                "error": ""
+            }
+        elif hasattr(content, "text"):
+            return {
+                "url": url,
+                "success": True,
+                "title": getattr(content, "title", ""),
+                "content": getattr(content, "text", ""),
+                "text_length": len(getattr(content, "text", "")),
+                "error": ""
+            }
+        else:
+            logger.warning(f"MCP content 파싱 실패: {content}")
+            return self._create_error_response(url, "본문 파싱 실패")
+
+    def _create_error_response(self, url: str, error_message: str) -> dict:
+        """표준화된 오류 응답 생성"""
+        return {
+            "url": url,
+            "success": False,
+            "title": "",
+            "content": "",
+            "text_length": 0,
+            "error": error_message
+        }
 
     async def fetch_urls(self, urls: List[str], max_concurrent: int = 3, timeout: int = 30) -> List[Dict]:
         results = []
