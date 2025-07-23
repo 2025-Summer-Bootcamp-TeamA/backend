@@ -36,7 +36,7 @@ def _call_visionstory_api(image_url):
         return response
     except Exception as e:
         print(f"VisionStory API 호출 에러: {e}")
-        return f"VisionStory API 호출 에러: {e}"
+        return None
 
 def _generate_prompt(image_url):
     # OpenAI 클라이언트 초기화 (최신 방식)
@@ -76,7 +76,7 @@ def _generate_prompt(image_url):
         return result
     except Exception as e:
         print(f"프롬프트 생성 에러: {e}")
-        return f"프롬프트 생성 에러: {e}"
+        return None
 
 def _generate_dalle_image(prompt_text):
     # OpenAI 클라이언트 초기화 (최신 방식)  
@@ -93,7 +93,7 @@ def _generate_dalle_image(prompt_text):
         return url
     except Exception as e:
         print(f"DALL·E 3 이미지 생성 에러: {e}")
-        return f"DALL·E 3 이미지 생성 에러: {e}"
+        return None
 
 # GCS 업로드 함수는 apps.gcs.storage_service로 이동됨
 # 기존 함수명 호환성을 위한 래퍼 함수
@@ -104,9 +104,8 @@ def _upload_image_to_gcs(image_url):
         print("GCS 업로드된 DALL·E 3 이미지 URL:", result)
         return result
     else:
-        error_msg = "GCS 업로드 에러: 업로드 실패"
-        print(error_msg)
-        return error_msg
+        print("GCS 업로드 에러: 업로드 실패")
+        return None
 
 @swagger_auto_schema(
     method='post',
@@ -181,10 +180,10 @@ def generate_avatar(request):
 
     # 1차 VisionStory 시도
     response = _call_visionstory_api(file_url)
-    if isinstance(response, str):
+    if not response:
         return JsonResponse({
             "success": False,
-            "error": response,
+            "error": "VisionStory API 호출 실패",
             "message": "VisionStory API 호출에 실패했습니다.",
             "retry_required": True
         }, status=500)
@@ -200,21 +199,21 @@ def generate_avatar(request):
 
     # VisionStory 실패 시 대체 생성
     prompt_text = _generate_prompt(file_url)
-    if not prompt_text or prompt_text.startswith("프롬프트 생성 에러"):
-        return JsonResponse({"success": False, "error": prompt_text or "프롬프트 생성 실패"}, status=500)
+    if not prompt_text:
+        return JsonResponse({"success": False, "error": "프롬프트 생성 실패"}, status=500)
     dalle_image_url = _generate_dalle_image(prompt_text)
-    if not dalle_image_url or dalle_image_url.startswith("DALL·E 3 이미지 생성 에러"):
-        return JsonResponse({"success": False, "error": dalle_image_url or "DALL·E 3 이미지 생성 실패"}, status=500)
+    if not dalle_image_url:
+        return JsonResponse({"success": False, "error": "DALL·E 3 이미지 생성 실패"}, status=500)
     gcs_url = _upload_image_to_gcs(dalle_image_url)
-    if not gcs_url or gcs_url.startswith("GCS 업로드 에러"):
-        return JsonResponse({"success": False, "error": gcs_url or "GCS 업로드 실패"}, status=500)
+    if not gcs_url:
+        return JsonResponse({"success": False, "error": "GCS 업로드 실패"}, status=500)
 
     # VisionStory 재시도
     retry_response = _call_visionstory_api(gcs_url)
-    if isinstance(retry_response, str):
+    if not retry_response:
         return JsonResponse({
             "success": False,
-            "error": retry_response,
+            "error": "VisionStory 재시도 중 오류 발생",
             "message": "VisionStory 재시도 중 오류 발생.",
             "retry_required": True
         }, status=500)
