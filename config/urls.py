@@ -33,6 +33,7 @@ schema_view = get_schema_view(
         path('api/v1/videos', include('apps.videos.urls')),
         path('api/v1/avatars', include('apps.avatars.urls')),
         path('places/', include('apps.place.urls')),
+        path('users/google/', GoogleLoginView.as_view()),  # 구글 OAuth 엔드포인트 Swagger에 포함
         path('', include('apps.authentication.urls')),
     ],
 )
