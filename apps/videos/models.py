@@ -10,6 +10,9 @@ class Video(models.Model):
     duration = models.PositiveIntegerField(default=0)  # 음수 불가
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        db_table = 'videos'
+
     def clean(self):
         if self.duration < 0:
             raise ValidationError({'duration': 'Duration must be non-negative.'})
