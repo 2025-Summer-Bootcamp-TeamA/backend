@@ -265,33 +265,39 @@ class AvatarListView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         print("원본 이미지 GCS URL:", file_url)
 
-        # 1차 VisionStory 시도 - 크레딧 절약을 위해 주석처리
-        # response = _call_visionstory_api(file_url)
-        # if not response:
-        #     return Response({
-        #         "success": False,
-        #         "error": "VisionStory API 호출 실패",
-        #         "message": "VisionStory API 호출에 실패했습니다.",
-        #         "retry_required": True
-        #     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        # if response.status_code == 200:
-        #     result = response.json()
-        #     return Response({
-        #         "success": True,
-        #         "avatar_id": result.get("data", {}).get("avatar_id"),
-        #         "thumbnail_url": result.get("data", {}).get("thumbnail_url"),
-        #         "uploaded_url": file_url,
-        #         "message": result.get("message", "아바타 생성 성공")
-        #     }, status=status.HTTP_200_OK)
+        # 모킹 모드 확인
+        use_mock = os.getenv("VISIONSTORY_USE_MOCK", "false").lower() == "true"
         
-        # 모의 아바타 생성 성공 응답 (크레딧 절약용)
-        logger.info("🚫 VisionStory 아바타 API 호출이 주석처리됨 - 모의 데이터 반환")
-        import time
-        mock_avatar_id = f"mock_avatar_{int(time.time())}"
-        return Response({
-            "success": True,
-            "avatar_id": mock_avatar_id,
-            "thumbnail_url": "https://mock.visionstory.ai/thumbnails/mock_avatar.jpg",
-            "uploaded_url": file_url,
-            "message": "모의 아바타 생성 성공 (크레딧 절약 모드)"
-        }, status=status.HTTP_200_OK)
+        if use_mock:
+            # 모의 아바타 생성 성공 응답
+            logger.info("🚫 모킹 모드 활성화 - 모의 아바타 데이터 반환")
+            import time
+            mock_avatar_id = f"mock_avatar_{int(time.time())}"
+            return Response({
+                "success": True,
+                "avatar_id": mock_avatar_id,
+                "thumbnail_url": "https://mock.visionstory.ai/thumbnails/mock_avatar.jpg",
+                "uploaded_url": file_url,
+                "message": "모의 아바타 생성 성공 (모킹 모드)"
+            }, status=status.HTTP_200_OK)
+        
+        # 실제 VisionStory API 호출
+        response = _call_visionstory_api(file_url)
+        if not response:
+            return Response({
+                "success": False,
+                "error": "VisionStory API 호출 실패",
+                "message": "VisionStory API 호출에 실패했습니다.",
+                "retry_required": True
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if response.status_code == 200:
+            result = response.json()
+            return Response({
+                "success": True,
+                "avatar_id": result.get("data", {}).get("avatar_id"),
+                "thumbnail_url": result.get("data", {}).get("thumbnail_url"),
+                "uploaded_url": file_url,
+                "message": result.get("message", "아바타 생성 성공")
+            }, status=status.HTTP_200_OK)
+        
+        # VisionStory 실패 시 대체 생성 로직은 여기서 계속...
