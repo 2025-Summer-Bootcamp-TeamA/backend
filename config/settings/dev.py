@@ -46,4 +46,3 @@ else:
     GS_CREDENTIALS = None
     # 개발 환경에서는 로그로 알림
     print("Warning: Google Cloud credentials not found. Some features may not work.")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
