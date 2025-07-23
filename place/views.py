@@ -50,6 +50,14 @@ class NearbyMuseumView(APIView):
             if content_list and hasattr(content_list[0], "text"):
                 places_json = json.loads(content_list[0].text)
                 places = places_json.get("places", [])
+                # rating, types 필드 제거 및 web_url, rank 필드 추가
+                for idx, p in enumerate(places[:4]):
+                    p.pop("rating", None)
+                    p.pop("types", None)
+                    if "web_url" not in p:
+                        p["web_url"] = None
+                    p["rank"] = idx + 1
+                places = places[:4]  # 가장 가까운 4개만 반환
             else:
                 places = []
             return Response(places, status=status.HTTP_200_OK)
