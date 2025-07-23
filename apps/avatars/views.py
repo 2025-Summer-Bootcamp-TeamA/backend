@@ -3,7 +3,6 @@ import uuid
 import requests
 from dotenv import load_dotenv
 import openai
-from django.core.files.base import ContentFile
 from django.conf import settings
 from django.http import JsonResponse
 from rest_framework.parsers import MultiPartParser
@@ -12,7 +11,11 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from django.core.files.storage import default_storage
 
+# GCS 업로드 서비스 import
+from apps.gcs.storage_service import upload_image_to_gcs, upload_file_to_gcs
+
 load_dotenv()
+
 VISIONSTORY_API_KEY = os.getenv("VISIONSTORY_API_KEY")
 VISIONSTORY_GENERATE_URL = "https://openapi.visionstory.ai/api/v1/avatar"
 
@@ -89,17 +92,18 @@ def _generate_dalle_image(prompt_text):
         print(f"DALL·E 3 이미지 생성 에러: {e}")
         return f"DALL·E 3 이미지 생성 에러: {e}"
 
+# GCS 업로드 함수는 apps.gcs.storage_service로 이동됨
+# 기존 함수명 호환성을 위한 래퍼 함수
 def _upload_image_to_gcs(image_url):
-    try:
-        image_content = requests.get(image_url).content
-        dalle_filename = f"avatars/dalle_{uuid.uuid4().hex}.png"
-        gcs_path = default_storage.save(dalle_filename, ContentFile(image_content))
-        gcs_url = default_storage.url(gcs_path)
-        print("GCS 업로드된 DALL·E 3 이미지 URL:", gcs_url)
-        return gcs_url
-    except Exception as e:
-        print(f"GCS 업로드 에러: {e}")
-        return f"GCS 업로드 에러: {e}"
+    """DALL·E 이미지 URL을 GCS에 업로드 (기존 호환성)"""
+    result = upload_image_to_gcs(image_url, folder="avatars")
+    if result:
+        print("GCS 업로드된 DALL·E 3 이미지 URL:", result)
+        return result
+    else:
+        error_msg = "GCS 업로드 에러: 업로드 실패"
+        print(error_msg)
+        return error_msg
 
 @swagger_auto_schema(
     method='post',
@@ -162,11 +166,14 @@ def generate_avatar(request):
     if not image_file:
         return JsonResponse({"success": False, "error": "이미지 파일이 필요합니다."}, status=400)
 
-    ext = os.path.splitext(image_file.name)[1]
-    filename = f"{uuid.uuid4().hex}{ext}"
-    save_path = f"avatars/{filename}"
-    file_path = default_storage.save(save_path, image_file)
-    file_url = default_storage.url(file_path)
+    # GCS 서비스를 사용하여 이미지 업로드
+    file_url = upload_file_to_gcs(image_file, folder="avatars")
+    if not file_url:
+        return JsonResponse({
+            "success": False, 
+            "error": "이미지 업로드 실패", 
+            "message": "이미지를 업로드할 수 없습니다."
+        }, status=500)
     print("원본 이미지 GCS URL:", file_url)
 
     # 1차 VisionStory 시도
