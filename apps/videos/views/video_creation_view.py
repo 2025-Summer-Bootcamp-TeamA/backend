@@ -57,7 +57,7 @@ class VideoCreationView(APIView):
             500: openapi.Response(description="서버 오류")
         }
     )
-    def post(self, request):
+    async def post(self, request):
         """작품 기반 영상 생성"""
         try:
             # 1단계: 요청 데이터 검증
@@ -93,7 +93,7 @@ class VideoCreationView(APIView):
             
             # 2단계: 작품 정보 추출 및 스크립트 생성
             logger.info("작품 정보 추출 시작")
-            artwork_info = self.orchestrator.extract_and_enrich(
+            artwork_info = await self.orchestrator.extract_and_enrich(
                 ocr_text=ocr_text,
                 museum_name=museum_name
             )

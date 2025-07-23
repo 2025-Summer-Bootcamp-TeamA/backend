@@ -137,7 +137,7 @@ class FetchService:
             logger.warning(f"Fetch 완료: 모든 URL 실패 ({total_count}개)")
         return results
 
-    def fetch_artwork_urls(self, search_results: Dict, max_urls: int = 5) -> List[Dict]:
+    async def fetch_artwork_urls(self, search_results: Dict, max_urls: int = 5) -> List[Dict]:
         """
         Brave Search 결과에서 URL을 추출하여 실제로 fetch MCP로 본문을 가져옵니다.
 
@@ -161,7 +161,7 @@ class FetchService:
         
         # 실제로 fetch MCP를 호출하여 본문을 가져옵니다
         logger.info(f"실제 fetch MCP 호출: {len(prioritized_urls)}개 URL")
-        return asyncio.run(self.fetch_urls(prioritized_urls, max_concurrent=3, timeout=30))
+        return await self.fetch_urls(prioritized_urls, max_concurrent=3, timeout=30)
 
 
     

@@ -39,7 +39,7 @@ class ArtworkInfoOrchestrator:
             "failed_extractions": 0
         }
     
-    def extract_and_enrich(self, ocr_text: str, museum_name: Optional[str] = None) -> ArtworkExtractedInfo:
+    async def extract_and_enrich(self, ocr_text: str, museum_name: Optional[str] = None) -> ArtworkExtractedInfo:
         """
         OCR 텍스트에서 작품 정보를 추출하고 웹 검색, Fetch, 스크립트 생성을 수행합니다.
         
@@ -67,7 +67,7 @@ class ArtworkInfoOrchestrator:
             logger.info("3단계: 콘텐츠 Fetch 보강")
             if web_search_info.performed and web_search_info.search_results:
                 logger.info("웹 검색이 수행되었으므로 Fetch 보강을 진행합니다")
-                content_fetch_info = self.content_enricher.enrich_with_content_fetch(web_search_info)
+                content_fetch_info = await self.content_enricher.enrich_with_content_fetch(web_search_info)
             else:
                 logger.info("웹 검색이 수행되지 않았으므로 Fetch 보강을 건너뜁니다 (OCR 설명 존재)")
                 from apps.core.services.entities.content_fetch_info import ContentFetchInfo

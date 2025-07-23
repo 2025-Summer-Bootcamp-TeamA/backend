@@ -27,7 +27,7 @@ class ContentFetchEnricher:
             logger.warning(f"Fetch 서비스 초기화 실패: {e}")
             self.fetch_service = None
     
-    def enrich_with_content_fetch(self, web_search_info: WebSearchInfo) -> ContentFetchInfo:
+    async def enrich_with_content_fetch(self, web_search_info: WebSearchInfo) -> ContentFetchInfo:
         """
         웹 검색 결과를 바탕으로 URL 본문을 가져와서 정보를 보강합니다.
         """
@@ -53,7 +53,7 @@ class ContentFetchEnricher:
         # Fetch를 무조건 시도 (enriched_description 유무와 무관)
         try:
             logger.info("Fetch MCP로 URL 본문 가져오기 시작 (enriched_description 유무와 무관)")
-            fetch_results = self.fetch_service.fetch_artwork_urls(web_search_info.search_results, max_urls=3)
+            fetch_results = await self.fetch_service.fetch_artwork_urls(web_search_info.search_results, max_urls=3)
             if fetch_results and any(r.get("success") for r in fetch_results):
                 content_snippets = self.fetch_service.extract_content_snippets(fetch_results, max_snippets=5)
                 content_enriched_description = self._enrich_description_with_content_data(
