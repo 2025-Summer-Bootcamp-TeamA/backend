@@ -2,14 +2,15 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from .models import Video
-from .serializers import VideoSerializer
+from ..models import Video
+from ..serializers import VideoSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+
 class VideoUploadView(APIView):
     """
-    영상 자동 저장 API
+    영상 저장 API
     """
     permission_classes = [AllowAny]
     
@@ -59,3 +60,22 @@ class VideoUploadView(APIView):
             serializer.errors, 
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+# TODO: 추후 추가할 CRUD 기능들
+#
+# class VideoListView(APIView):
+#     """영상 목록 조회 API"""
+#     pass
+#
+# class VideoDetailView(APIView):
+#     """영상 상세 조회 API"""
+#     pass
+#
+# class VideoUpdateView(APIView):
+#     """영상 수정 API"""
+#     pass
+#
+# class VideoDeleteView(APIView):
+#     """영상 삭제 API"""
+#     pass 

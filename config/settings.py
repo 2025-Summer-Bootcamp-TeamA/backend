@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from decouple import config
 from dotenv import load_dotenv
 
 # PyMySQL을 MySQLdb로 사용하도록 설정
@@ -34,6 +35,7 @@ INSTALLED_APPS = [
     # 내부 앱
     'apps.avatars',
     'apps.posts',
+    'apps.videos',
 
     # 외부 라이브러리
     'rest_framework',
@@ -140,3 +142,15 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # 기본 필드 타입
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Smithery MCP 설정
+SMITHERY_API_KEY = config("SMITHERY_API_KEY", default="")
+
+# Brave MCP 설정
+BRAVE_MCP_BASE_URL = config("BRAVE_MCP_BASE_URL", default="")
+BRAVE_API_KEY = config("BRAVE_API_KEY", default="")
+BRAVE_MCP_PROFILE = config("BRAVE_MCP_PROFILE", default="default")
+
+# Fetch MCP 설정
+FETCH_MCP_BASE_URL = config("FETCH_MCP_BASE_URL", default="")
+FETCH_API_KEY = config("FETCH_API_KEY", default="")

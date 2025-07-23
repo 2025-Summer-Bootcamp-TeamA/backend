@@ -70,4 +70,10 @@ celerybeat-schedule
 Thumbs.db
 ehthumbs.db
 
+# Google Cloud 서비스 계정 키 파일
+service-account*.json
+*-service-account.json
+google-credentials*.json
+*.service-account.json
+credentials/*.json
 credentials/service-account-key.json

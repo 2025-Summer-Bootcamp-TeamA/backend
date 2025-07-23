@@ -1,7 +1,8 @@
 from django.urls import path
-from . import views
+from .views.video_creation_view import VideoCreationView
+from .views.video_crud_views import VideoUploadView
 
 urlpatterns = [
-    # 영상 자동 저장 엔드포인트만 유지
-    path('', views.VideoUploadView.as_view(), name='video-upload'),
+    path('generate', VideoCreationView.as_view(), name='video_generation'),
+    path('', VideoUploadView.as_view(), name='video-upload'),
 ]
