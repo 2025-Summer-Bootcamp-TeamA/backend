@@ -1,3 +1,4 @@
+import asyncio
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -58,7 +59,7 @@ class VideoCreationView(APIView):
             500: openapi.Response(description="서버 오류")
         }
     )
-    async def post(self, request):
+    def post(self, request):
         """작품 기반 영상 생성"""
         try:
             # 1단계: 요청 데이터 검증
@@ -91,12 +92,12 @@ class VideoCreationView(APIView):
                 
                 logger.info(f"최신 아바타 ID 자동 설정: {avatar_id}")
             
-            # 2단계: 작품 정보 추출 및 스크립트 생성
+            # 2단계: 작품 정보 추출 및 스크립트 생성 (비동기 호출을 동기적으로 처리)
             logger.info("작품 정보 추출 시작")
-            artwork_info = await self.orchestrator.extract_and_enrich(
+            artwork_info = asyncio.run(self.orchestrator.extract_and_enrich(
                 ocr_text=ocr_text,
                 museum_name=museum_name
-            )
+            ))
             
             # 3단계: VisionStory 영상 생성
             logger.info("VisionStory 영상 생성 시작")
