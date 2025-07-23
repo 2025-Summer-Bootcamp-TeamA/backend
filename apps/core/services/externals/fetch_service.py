@@ -81,8 +81,12 @@ class FetchService:
                                 "error": "본문 파싱 실패"
                             }
                     except Exception as e:
-                        logger.error(f"Fetch MCP tool fetch_txt 실패: {e}")
-                        logger.error(traceback.format_exc())
+                        # 502 등 서버 오류는 경고 레벨로 처리 (너무 시끄럽지 않게)
+                        if "502 Bad Gateway" in str(e) or "BrokenResourceError" in str(e):
+                            logger.warning(f"Fetch MCP 서버 오류 (일시적): {url} - {e}")
+                        else:
+                            logger.error(f"Fetch MCP tool fetch_txt 실패: {e}")
+                            logger.error(traceback.format_exc())
                         return {
                             "url": url,
                             "success": False,
@@ -125,7 +129,12 @@ class FetchService:
                 })
             else:
                 results.append(result)
-        logger.info(f"Fetch 완료: {len([r for r in results if r['success']])}개 성공")
+        success_count = len([r for r in results if r['success']])
+        total_count = len(results)
+        if success_count > 0:
+            logger.info(f"Fetch 완료: {success_count}/{total_count}개 성공")
+        else:
+            logger.warning(f"Fetch 완료: 모든 URL 실패 ({total_count}개)")
         return results
 
     def fetch_artwork_urls(self, search_results: Dict, max_urls: int = 5) -> List[Dict]:
