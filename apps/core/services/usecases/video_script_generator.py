@@ -101,7 +101,7 @@ class VideoScriptGenerator:
 2. **흥미로운 도입**: 시청자의 관심을 끄는 흥미로운 시작
 3. **구체적인 정보**: 작품의 특징, 역사적 의미, 예술적 가치 등
 4. **감정적 연결**: 작품이 가진 감정적, 문화적 의미
-5. **적절한 길이**: 30초~2분 정도의 영상에 맞는 분량
+5. **적절한 길이**: 40-50초 정도의 짧은 영상에 맞는 분량
 6. **한국어**: 자연스러운 한국어로 작성
 7. **완성된 스크립트**: 바로 나레이션에 사용할 수 있는 완성된 형태
 
@@ -111,6 +111,12 @@ class VideoScriptGenerator:
 - 작품의 역사적 배경과 예술적 가치를 포함
 - 시청자가 작품을 직접 보는 듯한 생생한 묘사
 - 감정적이고 몰입감 있는 톤으로 작성
+- **중요**: 40-50초 분량으로 간결하고 핵심적인 내용만 포함
+
+길이 가이드:
+- 한국어 나레이션 기준 약 200-250자 정도 (40-50초 분량)
+- 너무 길지 않게 핵심 내용만 간추려서 작성
+- 작품의 가장 중요한 특징과 매력 포인트 위주로 구성
 
 응답은 스크립트 내용만 작성하세요. 다른 설명이나 주석은 포함하지 마세요."""
     
@@ -138,8 +144,8 @@ class VideoScriptGenerator:
         char_count = len(script_content)
         estimated_seconds = int(char_count / 5)  # 분당 300자 = 초당 5자
         
-        # 최소 10초, 최대 120초로 제한
-        return max(10, min(120, estimated_seconds))
+        # 40-50초 범위로 제한 (목표 길이)
+        return max(40, min(50, estimated_seconds))
     
     def _create_fallback_script(self, artwork_info: ArtworkExtractedInfo) -> VideoScriptInfo:
         """AI 실패시 기본 스크립트 생성"""
@@ -147,8 +153,8 @@ class VideoScriptGenerator:
         artist = artwork_info.basic_info.artist
         year = artwork_info.basic_info.year
         
-        # 기본 스크립트 템플릿
-        fallback_script = f"""이 작품은 {artist}가 {year}에 제작한 '{title}'입니다. 이 작품은 예술사에서 중요한 의미를 지니며, 작가의 독특한 기법과 창의성이 잘 드러나 있습니다. 박물관에서 직접 감상하시면 더욱 깊이 있는 예술 경험을 하실 수 있을 것입니다."""
+        # 기본 스크립트 템플릿 (40-50초 분량)
+        fallback_script = f"""{artist}의 대표작 '{title}'. {year}에 탄생한 이 작품은 독특한 기법과 깊이 있는 예술성으로 많은 이들에게 감동을 선사합니다. 작품 속에 담긴 작가의 철학과 시대정신을 직접 느껴보세요."""
         
         return VideoScriptInfo(
             script_content=fallback_script,
