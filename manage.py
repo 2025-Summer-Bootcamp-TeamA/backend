@@ -4,6 +4,10 @@ import os
 import sys
 from dotenv import load_dotenv
 
+# PyMySQL을 MySQLdb로 사용하도록 설정
+import pymysql
+pymysql.install_as_MySQLdb()
+
 load_dotenv()
 
 
