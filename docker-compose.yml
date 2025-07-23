@@ -23,6 +23,6 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
       - GS_BUCKET_NAME=${GS_BUCKET_NAME}
     command: |
-      bash -c "python manage.py makemigrations &&
-      python manage.py migrate &&
-      python manage.py runserver 0.0.0.0:8000"
+      bash -c "uv run python manage.py makemigrations &&
+      uv run python manage.py migrate &&
+      uv run python manage.py runserver 0.0.0.0:8000"

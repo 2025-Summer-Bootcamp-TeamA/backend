@@ -1,4 +1,4 @@
-FROM python:3.10
+FROM python:3.11
 
 # 작업 디렉토리 설정
 WORKDIR /app
@@ -15,3 +15,13 @@ RUN uv sync --frozen --no-dev
 
 # 소스 코드 복사
 COPY . .
+
+# Django 실행을 위한 환경 변수
+ENV PYTHONPATH=/app
+ENV DJANGO_SETTINGS_MODULE=config.settings.dev
+
+# 기본 포트 노출
+EXPOSE 8000
+
+# uv run을 사용하여 Django 서버 실행
+CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
