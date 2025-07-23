@@ -10,11 +10,9 @@ from apps.videos.views.video_crud_views import VideoUploadView
 
 # 전체 경로를 위한 URL 패턴들 - 공통 경로 제거
 api_urls = [
-    path('api/v1/posts', include('apps.posts.urls')),
     path('api/v1/videos/generate', VideoCreationView.as_view(), name='video_generation'),
     path('api/v1/videos', VideoUploadView.as_view(), name='video-upload'),
     path('api/v1/avatars', include('apps.avatars.urls')),
-    path('docs/', include('apps.posts.urls')),  # 더미 경로로 공통 패턴 파괴
 ]
 
 # Swagger 설정 - 전체 경로 표시용
