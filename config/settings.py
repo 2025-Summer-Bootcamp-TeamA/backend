@@ -35,10 +35,9 @@ INSTALLED_APPS = [
     # ✅ 외부 라이브러리
     'rest_framework',
     'drf_yasg',
-
-    'storages'
-
-    "apps.authentication"
+    'storages',
+    'apps.authentication',
+    'place'
 ]
 
 # ✅ 미들웨어
