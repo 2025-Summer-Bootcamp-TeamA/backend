@@ -13,7 +13,9 @@ DB_TYPE = os.getenv('DB_TYPE', 'mysql')
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_PORT = os.getenv('DB_PORT', '3306')
 DB_USER = os.getenv('DB_USER', 'root')
-DB_PASSWORD = os.getenv('DB_PASSWORD', 'password')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+if not DB_PASSWORD:
+    raise ValueError("DB_PASSWORD 환경 변수는 필수로 설정되어야 합니다.")
 DB_NAME = os.getenv('DB_NAME', 'teama_db')
 
 # 데이터베이스 엔진 매핑
