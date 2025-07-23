@@ -4,6 +4,7 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from .serializers import NearbyMuseumRequestSerializer, NearbyMuseumResponseSerializer
 from .services.maps_mcp import search_nearby_museums
+import json
 
 class NearbyMuseumView(APIView):
 
@@ -27,8 +28,31 @@ class NearbyMuseumView(APIView):
         # 🔽 여기가 핵심: 비동기 함수를 동기에서 호출할 수 있도록 `async_to_sync` 사용
         from asgiref.sync import async_to_sync
         try:
-            museums = async_to_sync(search_nearby_museums)(lat, lng, radius, keyword)
-            return Response(museums, status=status.HTTP_200_OK)
+            payload = {
+                "query": keyword,
+                "location": {
+                    "latitude": lat,
+                    "longitude": lng
+                },
+                "radius": radius,
+                "language": "ko"  # ← 이 부분 추가!
+            }
+            result = async_to_sync(search_nearby_museums)(lat, lng, radius, keyword)
+            # CallToolResult 객체를 dict로 변환
+            if hasattr(result, "to_dict"):
+                result_dict = result.to_dict()
+            elif hasattr(result, "data"):
+                result_dict = result.data
+            else:
+                result_dict = dict(result)
+            # content에서 JSON 파싱
+            content_list = result_dict.get("content", [])
+            if content_list and hasattr(content_list[0], "text"):
+                places_json = json.loads(content_list[0].text)
+                places = places_json.get("places", [])
+            else:
+                places = []
+            return Response(places, status=status.HTTP_200_OK)
         except Exception as e:
             return Response(
                 {"error": f"Google Maps MCP 호출 중 오류 발생: {str(e)}"},
