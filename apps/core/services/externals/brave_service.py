@@ -17,6 +17,12 @@ BRAVE_API_KEY = os.getenv("BRAVE_API_KEY")
 SMITHERY_API_KEY = os.getenv("SMITHERY_API_KEY")
 BRAVE_PROFILE = os.getenv("BRAVE_MCP_PROFILE", "other-beetle-JoaZ1u")
 
+# 환경 변수 검증
+if not BRAVE_API_KEY:
+    raise ValueError("BRAVE_API_KEY 환경 변수가 설정되지 않았습니다")
+if not SMITHERY_API_KEY:
+    raise ValueError("SMITHERY_API_KEY 환경 변수가 설정되지 않았습니다")
+
 
 class MCPConnectionError(Exception):
     """MCP 연결 관련 오류"""
