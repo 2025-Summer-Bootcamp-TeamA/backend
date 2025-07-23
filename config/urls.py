@@ -15,7 +15,6 @@ api_urls = [
     path('api/v1/videos', VideoUploadView.as_view(), name='video-upload'),
     path('api/v1/avatars', include('apps.avatars.urls')),
     path('places/', include('apps.place.urls')),
-    path('docs/', include('apps.posts.urls')),  # 더미 경로로 공통 패턴 파괴
 ]
 
 # Swagger 설정 - 전체 경로 표시용
@@ -31,7 +30,6 @@ schema_view = get_schema_view(
     public=True,
     permission_classes=[AllowAny],
     patterns=[  # 실제 API만 포함
-        path('api/v1/posts', include('apps.posts.urls')),
         path('api/v1/videos', include('apps.videos.urls')),
         path('api/v1/avatars', include('apps.avatars.urls')),
         path('places/', include('apps.place.urls')),

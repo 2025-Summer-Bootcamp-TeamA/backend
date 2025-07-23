@@ -34,7 +34,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # 내부 앱
     'apps.avatars',
-    'apps.posts',
     'apps.videos',
 
     # 외부 라이브러리
