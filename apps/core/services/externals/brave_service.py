@@ -102,14 +102,14 @@ async def _brave_search_single_attempt(url: str, query: str, count: int) -> dict
                 return _process_brave_result(content, result)
                 
     except ConnectionError as e:
-        raise MCPConnectionError(f"Brave MCP 서버 연결 실패: {e}")
+        raise MCPConnectionError(f"Brave MCP 서버 연결 실패: {e}") from e
     except TimeoutError as e:
-        raise MCPConnectionError(f"Brave MCP 연결 타임아웃: {e}")
+        raise MCPConnectionError(f"Brave MCP 연결 타임아웃: {e}") from e
     except Exception as e:
         if "502 Bad Gateway" in str(e) or "BrokenResourceError" in str(e):
-            raise MCPConnectionError(f"Brave MCP 서버 일시적 오류: {e}")
+            raise MCPConnectionError(f"Brave MCP 서버 일시적 오류: {e}") from e
         elif "tool" in str(e).lower() or "brave_web_search" in str(e):
-            raise MCPToolError(f"brave_web_search 도구 실행 실패: {e}")
+            raise MCPToolError(f"brave_web_search 도구 실행 실패: {e}") from e
         else:
             raise
 

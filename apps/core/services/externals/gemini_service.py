@@ -132,7 +132,7 @@ class GeminiService:
                 
         except Exception as e:
             logger.error(f"서비스 계정 인증 설정 실패: {str(e)}")
-            raise ValueError(f"Vertex AI 서비스 인증 설정에 실패했습니다: {str(e)}")
+            raise ValueError(f"Vertex AI 서비스 인증 설정에 실패했습니다: {str(e)}") from e
     
     def _initialize_vertex_ai(self):
         """Vertex AI 초기화"""
@@ -144,7 +144,7 @@ class GeminiService:
             logger.info(f"Vertex AI 초기화 완료 - 프로젝트: {self.project_id}, 리전: {self.location}")
         except Exception as e:
             logger.error(f"Vertex AI 초기화 실패: {e}")
-            raise ValueError(f"Vertex AI 초기화에 실패했습니다: {str(e)}")
+            raise ValueError(f"Vertex AI 초기화에 실패했습니다: {str(e)}") from e
     
     def _load_model(self):
         """Gemini 모델 로드"""
@@ -153,7 +153,7 @@ class GeminiService:
             logger.info(f"Gemini 모델 로드 완료: {self.model_name}")
         except Exception as e:
             logger.error(f"Gemini 모델 로드 실패: {e}")
-            raise ValueError(f"Gemini 모델 로드에 실패했습니다: {str(e)}")
+            raise ValueError(f"Gemini 모델 로드에 실패했습니다: {str(e)}") from e
     
     def get_stats(self) -> Dict[str, Any]:
         """서비스 사용 통계 반환"""

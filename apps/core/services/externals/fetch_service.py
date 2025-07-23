@@ -89,14 +89,14 @@ class FetchService:
                     return self._process_mcp_result(url, content)
                     
         except ConnectionError as e:
-            raise MCPConnectionError(f"MCP 서버 연결 실패: {e}")
+            raise MCPConnectionError(f"MCP 서버 연결 실패: {e}") from e
         except TimeoutError as e:
-            raise MCPConnectionError(f"MCP 연결 타임아웃: {e}")
+            raise MCPConnectionError(f"MCP 연결 타임아웃: {e}") from e
         except Exception as e:
             if "502 Bad Gateway" in str(e) or "BrokenResourceError" in str(e):
-                raise MCPConnectionError(f"MCP 서버 일시적 오류: {e}")
+                raise MCPConnectionError(f"MCP 서버 일시적 오류: {e}") from e
             elif "tool" in str(e).lower():
-                raise MCPToolError(f"fetch_txt 도구 실행 실패: {e}")
+                raise MCPToolError(f"fetch_txt 도구 실행 실패: {e}") from e
             else:
                 raise
 
