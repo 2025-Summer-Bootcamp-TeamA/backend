@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from apps.core.services import ArtworkInfoOrchestrator
 from apps.videos.services import VideoGenerator
+from apps.videos.services.visionstory_service import VisionStoryService
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import logging
@@ -79,7 +80,6 @@ class VideoCreationView(APIView):
             # avatarId가 없으면 최신 아바타 ID 자동 조회
             if not avatar_id:
                 logger.info("avatarId가 제공되지 않음. 최신 아바타 ID 조회 시작")
-                from apps.videos.services.visionstory_service import VisionStoryService
                 visionstory_service = VisionStoryService()
                 avatar_id = visionstory_service.get_latest_avatar_id()
                 
