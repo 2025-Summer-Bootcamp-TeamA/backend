@@ -132,3 +132,6 @@ LOGGING = {
         },
     },
 }
+
+# OpenAI API 설정
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

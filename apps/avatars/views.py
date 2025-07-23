@@ -39,7 +39,8 @@ def _call_visionstory_api(image_url):
         return f"VisionStory API 호출 에러: {e}"
 
 def _generate_prompt(image_url):
-    openai.api_key = settings.OPENAI_API_KEY
+    # OpenAI 클라이언트 초기화 (최신 방식)
+    client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
     prompt = (
         "한국어로 대답해줘. 이 이미지를 바탕으로 다음 항목에 대해 매우 구체적으로 설명해줘:\n\n"
         "- 주요 인물 또는 중심 객체는 무엇이며, 외형적 특징은 어떤가요?\n"
@@ -57,7 +58,7 @@ def _generate_prompt(image_url):
         "결과는 DALL·E 3 이미지 생성 프롬프트로 바로 사용할 예정이야."
     )
     try:
-        gpt_response = openai.chat.completions.create(
+        gpt_response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {
@@ -78,8 +79,10 @@ def _generate_prompt(image_url):
         return f"프롬프트 생성 에러: {e}"
 
 def _generate_dalle_image(prompt_text):
+    # OpenAI 클라이언트 초기화 (최신 방식)  
+    client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
     try:
-        dalle_response = openai.images.generate(
+        dalle_response = client.images.generate(
             model="dall-e-3",
             prompt=prompt_text,
             n=1,
