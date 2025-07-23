@@ -22,6 +22,68 @@ class VisionStoryService:
             logger.error("VISIONSTORY_API_KEY 환경 변수가 설정되지 않았습니다.")
             raise ValueError("VISIONSTORY_API_KEY 환경 변수가 설정되지 않았습니다.")
     
+    def get_avatars(self) -> Optional[Dict[str, Any]]:
+        """
+        VisionStory에서 사용 가능한 아바타 목록을 조회합니다.
+        
+        Returns:
+            Dict: 아바타 목록 데이터 또는 None (실패 시)
+        """
+        try:
+            url = f"{self.base_url}/avatars"
+            headers = {
+                "X-API-Key": self.api_key,
+                "Content-Type": "application/json"
+            }
+            
+            logger.info("VisionStory 아바타 목록 조회 시작")
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+            
+            data = response.json()
+            logger.info(f"아바타 목록 조회 성공: public_avatars={len(data.get('data', {}).get('public_avatars', []))}, my_avatars={len(data.get('data', {}).get('my_avatars', []))}")
+            
+            return data
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"VisionStory 아바타 목록 조회 실패: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"아바타 목록 조회 중 예외 발생: {e}")
+            return None
+    
+    def get_latest_avatar_id(self) -> Optional[str]:
+        """
+        가장 최근에 생성된 아바타 ID를 조회합니다.
+        
+        Returns:
+            str: 최신 아바타 ID 또는 None (실패 시)
+        """
+        try:
+            avatars_data = self.get_avatars()
+            if not avatars_data:
+                logger.warning("아바타 목록 조회 실패")
+                return None
+            
+            data = avatars_data.get('data', {})
+            my_avatars = data.get('my_avatars', [])
+            
+            if not my_avatars:
+                logger.warning("생성된 아바타가 없습니다")
+                return None
+            
+            # 가장 최근 아바타 (첫 번째 아바타가 최신이라고 가정)
+            latest_avatar = my_avatars[0]
+            avatar_id = latest_avatar.get('avatar_id')
+            
+            logger.info(f"최신 아바타 ID 조회 성공: {avatar_id}")
+            return avatar_id
+            
+        except Exception as e:
+            logger.error(f"최신 아바타 ID 조회 중 예외 발생: {e}")
+            return None
+    
     def create_video(self, 
                     avatar_id: str, 
                     video_script: str,

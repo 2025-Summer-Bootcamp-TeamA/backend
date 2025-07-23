@@ -28,11 +28,11 @@ class VideoCreationView(APIView):
         operation_description="OCR 텍스트를 기반으로 작품 정보를 추출하고 영상을 자동 생성합니다",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
-            required=['ocrText', 'avatarId'],
+            required=['ocrText'],
             properties={
                 'ocrText': openapi.Schema(type=openapi.TYPE_STRING, description='OCR로 추출된 텍스트', example='모나리자\n레오나르도 다 빈치\n1503-1519년'),
                 'museumName': openapi.Schema(type=openapi.TYPE_STRING, description='박물관/미술관 이름', example='루브르 박물관'),
-                'avatarId': openapi.Schema(type=openapi.TYPE_STRING, description='사용할 아바타 ID', example='4321918387609092991'),
+                'avatarId': openapi.Schema(type=openapi.TYPE_STRING, description='사용할 아바타 ID (선택적, 미제공 시 최신 아바타 자동 사용)', example='4321918387609092991'),
                 'voiceId': openapi.Schema(type=openapi.TYPE_STRING, description='사용할 음성 ID', example='Alice'),
                 'aspectRatio': openapi.Schema(type=openapi.TYPE_STRING, description='비디오 비율', example='9:16'),
                 'resolution': openapi.Schema(type=openapi.TYPE_STRING, description='해상도', example='480p'),
@@ -70,11 +70,26 @@ class VideoCreationView(APIView):
             emotion = request.data.get('emotion', 'cheerful')
             background_color = request.data.get('backgroundColor', '')
             
-            if not ocr_text or not avatar_id:
+            if not ocr_text:
                 return Response(
-                    {'error': 'ocrText와 avatarId는 필수입니다.'},
+                    {'error': 'ocrText는 필수입니다.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+            
+            # avatarId가 없으면 최신 아바타 ID 자동 조회
+            if not avatar_id:
+                logger.info("avatarId가 제공되지 않음. 최신 아바타 ID 조회 시작")
+                from apps.videos.services.visionstory_service import VisionStoryService
+                visionstory_service = VisionStoryService()
+                avatar_id = visionstory_service.get_latest_avatar_id()
+                
+                if not avatar_id:
+                    return Response(
+                        {'error': '사용 가능한 아바타가 없습니다. 먼저 아바타를 생성해주세요.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                logger.info(f"최신 아바타 ID 자동 설정: {avatar_id}")
             
             # 2단계: 작품 정보 추출 및 스크립트 생성
             logger.info("작품 정보 추출 시작")
