@@ -90,10 +90,7 @@ async def brave_search(query, count=3) -> dict:
     except Exception as e:
         logger.error(f"🌐 Brave MCP 요청 중 예외 발생: {str(e)}")
         logger.error(traceback.format_exc())
-        # raw response/result가 있다면 최대한 출력
-        try:
-            logger.error(f"[DEBUG] result: {locals().get('result', None)}")
-            logger.error(f"[DEBUG] content: {locals().get('content', None)}")
-        except Exception as log_e:
-            logger.error(f"[DEBUG] 로깅 중 추가 예외: {log_e}")
+        # 필요한 경우 특정 변수만 선택적으로 로깅
+        if 'result' in locals():
+            logger.error(f"[DEBUG] 응답 타입: {type(locals().get('result'))}")
         return {"success": False, "error": str(e)}
