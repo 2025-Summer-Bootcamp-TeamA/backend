@@ -4,9 +4,7 @@ import requests
 from dotenv import load_dotenv
 import openai
 from django.conf import settings
-from django.http import JsonResponse
 from rest_framework.parsers import MultiPartParser
-from rest_framework.decorators import api_view, parser_classes
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -115,139 +113,11 @@ def _upload_image_to_gcs(image_url):
         print("GCS 업로드 에러: 업로드 실패")
         return None
 
-@swagger_auto_schema(
-    method='post',
-    operation_description="이미지를 업로드하면 아바타를 생성합니다. 실패 시 다른 이미지 업로드를 요청합니다.",
-    manual_parameters=[
-        openapi.Parameter(
-            name="image",
-            in_=openapi.IN_FORM,
-            type=openapi.TYPE_FILE,
-            description="업로드할 이미지 파일 (선명하고 정면을 바라보는 인물 사진 권장)",
-            required=True
-        )
-    ],
-    responses={
-        200: openapi.Response(
-            description="아바타 생성 성공",
-            schema=openapi.Schema(
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    'success': openapi.Schema(type=openapi.TYPE_BOOLEAN, example=True),
-                    'avatar_id': openapi.Schema(type=openapi.TYPE_STRING, description='생성된 아바타 ID'),
-                    'thumbnail_url': openapi.Schema(type=openapi.TYPE_STRING, description='아바타 썸네일 URL'),
-                    'uploaded_url': openapi.Schema(type=openapi.TYPE_STRING, description='업로드된 원본 이미지 URL'),
-                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='성공 메시지'),
-                }
-            )
-        ),
-        400: openapi.Response(
-            description="아바타 생성 실패 - 다른 이미지 필요",
-            schema=openapi.Schema(
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    'success': openapi.Schema(type=openapi.TYPE_BOOLEAN, example=False),
-                    'error': openapi.Schema(type=openapi.TYPE_STRING, description='에러 타입'),
-                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='사용자에게 보여줄 메시지'),
-                    'retry_required': openapi.Schema(type=openapi.TYPE_BOOLEAN, example=True, description='새 이미지 업로드 필요'),
-                    'suggestion': openapi.Schema(type=openapi.TYPE_STRING, description='개선 제안'),
-                }
-            )
-        ),
-        500: openapi.Response(
-            description="서버 오류",
-            schema=openapi.Schema(
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    'success': openapi.Schema(type=openapi.TYPE_BOOLEAN, example=False),
-                    'error': openapi.Schema(type=openapi.TYPE_STRING, description='에러 타입'),
-                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='사용자에게 보여줄 메시지'),
-                    'retry_required': openapi.Schema(type=openapi.TYPE_BOOLEAN, example=True, description='새 이미지 업로드 필요'),
-                    'detail': openapi.Schema(type=openapi.TYPE_STRING, description='상세 에러 정보'),
-                }
-            )
-        )
-    },
-)
-@api_view(['POST'])
-@parser_classes([MultiPartParser])
-def generate_avatar(request):
-    image_file = request.FILES.get("image")
-    if not image_file:
-        return JsonResponse({"success": False, "error": "이미지 파일이 필요합니다."}, status=400)
-
-    # GCS 서비스를 사용하여 이미지 업로드
-    file_url = upload_file_to_gcs(image_file, folder="avatars")
-    if not file_url:
-        return JsonResponse({
-            "success": False, 
-            "error": "이미지 업로드 실패", 
-            "message": "이미지를 업로드할 수 없습니다."
-        }, status=500)
-    print("원본 이미지 GCS URL:", file_url)
-
-    # 1차 VisionStory 시도
-    response = _call_visionstory_api(file_url)
-    if not response:
-        return JsonResponse({
-            "success": False,
-            "error": "VisionStory API 호출 실패",
-            "message": "VisionStory API 호출에 실패했습니다.",
-            "retry_required": True
-        }, status=500)
-    if response.status_code == 200:
-        result = response.json()
-        return JsonResponse({
-            "success": True,
-            "avatar_id": result.get("data", {}).get("avatar_id"),
-            "thumbnail_url": result.get("data", {}).get("thumbnail_url"),
-            "uploaded_url": file_url,
-            "message": result.get("message", "아바타 생성 성공")
-        })
-
-    # VisionStory 실패 시 대체 생성
-    prompt_text = _generate_prompt(file_url)
-    if not prompt_text:
-        return JsonResponse({"success": False, "error": "프롬프트 생성 실패"}, status=500)
-    dalle_image_url = _generate_dalle_image(prompt_text)
-    if not dalle_image_url:
-        return JsonResponse({"success": False, "error": "DALL·E 3 이미지 생성 실패"}, status=500)
-    gcs_url = _upload_image_to_gcs(dalle_image_url)
-    if not gcs_url:
-        return JsonResponse({"success": False, "error": "GCS 업로드 실패"}, status=500)
-
-    # VisionStory 재시도
-    retry_response = _call_visionstory_api(gcs_url)
-    if not retry_response:
-        return JsonResponse({
-            "success": False,
-            "error": "VisionStory 재시도 중 오류 발생",
-            "message": "VisionStory 재시도 중 오류 발생.",
-            "retry_required": True
-        }, status=500)
-    if retry_response.status_code == 200:
-        result = retry_response.json()
-        return JsonResponse({
-            "success": True,
-            "avatar_id": result.get("data", {}).get("avatar_id"),
-            "thumbnail_url": result.get("data", {}).get("thumbnail_url"),
-            "uploaded_url": gcs_url,
-            "message": "VisionStory 실패, DALL·E 3로 대체 생성 후 성공"
-        })
-    else:
-        print("VisionStory 재시도 실패 응답:", retry_response.text)
-        return JsonResponse({
-            "success": False,
-            "error": "아바타 생성 실패",
-            "message": "현재 이미지로는 아바타를 생성할 수 없습니다. 다른 이미지를 업로드해주세요.",
-            "retry_required": True,
-            "suggestion": "더 선명하고 정면을 바라보는 인물 사진을 사용해보세요."
-        }, status=400)
-
 
 class AvatarListView(APIView):
-    """아바타 목록 조회 API"""
+    """아바타 목록 조회 및 생성 API"""
     permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser]  # 파일 업로드를 위한 파서 추가
     
     @swagger_auto_schema(
         operation_description="VisionStory에서 사용 가능한 아바타 목록을 조회합니다",
@@ -320,3 +190,108 @@ class AvatarListView(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @swagger_auto_schema(
+        operation_description="이미지를 업로드하면 아바타를 생성합니다. 실패 시 다른 이미지 업로드를 요청합니다.",
+        manual_parameters=[
+            openapi.Parameter(
+                name="image",
+                in_=openapi.IN_FORM,
+                type=openapi.TYPE_FILE,
+                description="업로드할 이미지 파일 (선명하고 정면을 바라보는 인물 사진 권장)",
+                required=True
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description="아바타 생성 성공",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN, example=True),
+                        'avatar_id': openapi.Schema(type=openapi.TYPE_STRING, description='생성된 아바타 ID'),
+                        'thumbnail_url': openapi.Schema(type=openapi.TYPE_STRING, description='아바타 썸네일 URL'),
+                        'uploaded_url': openapi.Schema(type=openapi.TYPE_STRING, description='업로드된 원본 이미지 URL'),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='성공 메시지'),
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="아바타 생성 실패 - 다른 이미지 필요",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN, example=False),
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, description='에러 타입'),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='사용자에게 보여줄 메시지'),
+                        'retry_required': openapi.Schema(type=openapi.TYPE_BOOLEAN, example=True, description='새 이미지 업로드 필요'),
+                        'suggestion': openapi.Schema(type=openapi.TYPE_STRING, description='개선 제안'),
+                    }
+                )
+            ),
+            500: openapi.Response(
+                description="서버 오류",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN, example=False),
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, description='에러 타입'),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='사용자에게 보여줄 메시지'),
+                        'retry_required': openapi.Schema(type=openapi.TYPE_BOOLEAN, example=True, description='새 이미지 업로드 필요'),
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='상세 에러 정보'),
+                    }
+                )
+            )
+        },
+    )
+    def post(self, request):
+        """아바타 생성"""
+        image_file = request.FILES.get("image")
+        if not image_file:
+            return Response({
+                "success": False, 
+                "error": "이미지 파일이 필요합니다.",
+                "retry_required": True
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # GCS 서비스를 사용하여 이미지 업로드
+        file_url = upload_file_to_gcs(image_file, folder="avatars")
+        if not file_url:
+            return Response({
+                "success": False, 
+                "error": "이미지 업로드 실패", 
+                "message": "이미지를 업로드할 수 없습니다.",
+                "retry_required": True
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        print("원본 이미지 GCS URL:", file_url)
+
+        # 1차 VisionStory 시도 - 크레딧 절약을 위해 주석처리
+        # response = _call_visionstory_api(file_url)
+        # if not response:
+        #     return Response({
+        #         "success": False,
+        #         "error": "VisionStory API 호출 실패",
+        #         "message": "VisionStory API 호출에 실패했습니다.",
+        #         "retry_required": True
+        #     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # if response.status_code == 200:
+        #     result = response.json()
+        #     return Response({
+        #         "success": True,
+        #         "avatar_id": result.get("data", {}).get("avatar_id"),
+        #         "thumbnail_url": result.get("data", {}).get("thumbnail_url"),
+        #         "uploaded_url": file_url,
+        #         "message": result.get("message", "아바타 생성 성공")
+        #     }, status=status.HTTP_200_OK)
+        
+        # 모의 아바타 생성 성공 응답 (크레딧 절약용)
+        logger.info("🚫 VisionStory 아바타 API 호출이 주석처리됨 - 모의 데이터 반환")
+        import time
+        mock_avatar_id = f"mock_avatar_{int(time.time())}"
+        return Response({
+            "success": True,
+            "avatar_id": mock_avatar_id,
+            "thumbnail_url": "https://mock.visionstory.ai/thumbnails/mock_avatar.jpg",
+            "uploaded_url": file_url,
+            "message": "모의 아바타 생성 성공 (크레딧 절약 모드)"
+        }, status=status.HTTP_200_OK)

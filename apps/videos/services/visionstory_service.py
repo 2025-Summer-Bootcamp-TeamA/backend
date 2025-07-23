@@ -38,13 +38,33 @@ class VisionStoryService:
             
             logger.info("VisionStory 아바타 목록 조회 시작")
             
-            response = requests.get(url, headers=headers, timeout=30)
-            response.raise_for_status()
+            # VisionStory 아바타 목록 조회 API 호출 - 크레딧 절약을 위해 주석처리
+            # response = requests.get(url, headers=headers, timeout=30)
+            # response.raise_for_status()
+            # 
+            # data = response.json()
+            # logger.info(f"아바타 목록 조회 성공: public_avatars={len(data.get('data', {}).get('public_avatars', []))}, my_avatars={len(data.get('data', {}).get('my_avatars', []))}")
+            # 
+            # return data
             
-            data = response.json()
-            logger.info(f"아바타 목록 조회 성공: public_avatars={len(data.get('data', {}).get('public_avatars', []))}, my_avatars={len(data.get('data', {}).get('my_avatars', []))}")
-            
-            return data
+            # 모의 아바타 목록 데이터 반환 (크레딧 절약용)
+            logger.info("🚫 VisionStory 아바타 목록 API 호출이 주석처리됨 - 모의 데이터 반환")
+            mock_data = {
+                "success": True,
+                "data": {
+                    "public_avatars": [
+                        {"avatar_id": "mock_avatar_1", "name": "Mock Avatar 1", "thumbnail": "https://mock.visionstory.ai/avatar1.jpg"},
+                        {"avatar_id": "mock_avatar_2", "name": "Mock Avatar 2", "thumbnail": "https://mock.visionstory.ai/avatar2.jpg"}
+                    ],
+                    "my_avatars": [
+                        {"avatar_id": "mock_my_avatar_1", "name": "My Mock Avatar", "thumbnail": "https://mock.visionstory.ai/my_avatar.jpg"}
+                    ],
+                    "total_cnt": 3
+                },
+                "message": "모의 아바타 목록 조회 성공"
+            }
+            logger.info(f"모의 아바타 목록 조회 성공: public_avatars={len(mock_data.get('data', {}).get('public_avatars', []))}, my_avatars={len(mock_data.get('data', {}).get('my_avatars', []))}")
+            return mock_data
             
         except requests.exceptions.RequestException as e:
             logger.error(f"VisionStory 아바타 목록 조회 실패: {e}")
@@ -132,17 +152,32 @@ class VisionStoryService:
             logger.info(f"VisionStory API 요청 URL: {self.base_url}/video")
             logger.info(f"VisionStory API 요청 페이로드: {payload}")
             
-            response = requests.post(
-                f"{self.base_url}/video",
-                json=payload,
-                headers=headers,
-                timeout=30
-            )
+            # VisionStory API 호출 - 크레딧 절약을 위해 주석처리
+            # response = requests.post(
+            #     f"{self.base_url}/video",
+            #     json=payload,
+            #     headers=headers,
+            #     timeout=30
+            # )
             
-            logger.info(f"VisionStory API 응답: status={response.status_code}, content={response.text[:500]}")
+            # logger.info(f"VisionStory API 응답: status={response.status_code}, content={response.text[:500]}")
             
-            if response.status_code == 200:
-                result = response.json()
+            # 모의 응답 데이터 생성 (크레딧 절약용)
+            logger.info("🚫 VisionStory API 호출이 주석처리됨 - 모의 데이터 반환")
+            mock_response_data = {
+                "video_id": f"mock_video_{int(datetime.now().timestamp())}",
+                "video_url": "https://mock.visionstory.ai/videos/mock_video.mp4",
+                "thumbnail_url": "https://mock.visionstory.ai/thumbnails/mock_thumb.jpg",
+                "status": "created",
+                "duration": 60,  # 모의 60초 영상
+                "cost_credit": 0  # 실제로는 크레딧 소모하지 않음
+            }
+            response_status = 200  # 모의 성공 상태
+            
+            # if response.status_code == 200:
+            if response_status == 200:
+                # result = response.json()
+                result = mock_response_data
                 
                 # 성공 응답 처리
                 video_info = VisionStoryVideoInfo(
@@ -159,7 +194,7 @@ class VisionStoryService:
                     duration=result.get("duration", 0),
                     cost_credit=result.get("cost_credit", 0),
                     created_at=datetime.now(),
-                    generation_method="visionstory_api",
+                    generation_method="mock_api",  # 모의 API 표시
                     success=True
                 )
                 
@@ -167,17 +202,24 @@ class VisionStoryService:
                 return video_info
                 
             else:
-                error_msg = f"VisionStory API 오류: {response.status_code} - {response.text}"
+                error_msg = f"VisionStory API 오류: {response_status} - 모의 API 오류"
                 logger.error(error_msg)
                 
                 return VisionStoryVideoInfo(
+                    video_id="",
+                    video_url="",
+                    thumbnail_url="",
+                    status="error",
                     avatar_id=avatar_id,
                     voice_id=voice_id,
                     aspect_ratio=aspect_ratio,
                     resolution=resolution,
                     emotion=emotion,
                     background_color=background_color,
-                    generation_method="visionstory_api",
+                    duration=0,
+                    cost_credit=0,
+                    created_at=datetime.now(),
+                    generation_method="mock_api",
                     success=False,
                     error_message=error_msg
                 )
@@ -187,13 +229,20 @@ class VisionStoryService:
             logger.error(error_msg)
             
             return VisionStoryVideoInfo(
+                video_id="",
+                video_url="",
+                thumbnail_url="",
+                status="error",
                 avatar_id=avatar_id,
                 voice_id=voice_id,
                 aspect_ratio=aspect_ratio,
                 resolution=resolution,
                 emotion=emotion,
                 background_color=background_color,
-                generation_method="visionstory_api",
+                duration=0,
+                cost_credit=0,
+                created_at=datetime.now(),
+                generation_method="mock_api",
                 success=False,
                 error_message=error_msg
             )
