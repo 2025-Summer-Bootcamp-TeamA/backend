@@ -116,10 +116,10 @@ class VideoCreationView(APIView):
                 'thumbnailUrl': video_info.thumbnail_url,
                 'duration': video_info.duration,
                 'artworkInfo': {
-                    'title': artwork_info.basic_info.title,
-                    'artist': artwork_info.basic_info.artist,
-                    'description': artwork_info.web_search.description,
-                    'videoScript': artwork_info.video_script.script_content
+                    'title': artwork_info.basic_info.title if artwork_info.basic_info and artwork_info.basic_info.title else '',
+                    'artist': artwork_info.basic_info.artist if artwork_info.basic_info and artwork_info.basic_info.artist else '',
+                    'description': artwork_info.web_search.description if artwork_info.web_search and artwork_info.web_search.description else '',
+                    'videoScript': artwork_info.video_script.script_content if artwork_info.video_script and artwork_info.video_script.script_content else ''
                 }
             }
             
