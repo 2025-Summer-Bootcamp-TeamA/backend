@@ -32,7 +32,7 @@ schema_view = get_schema_view(
         path('api/v1/videos', include('apps.videos.urls')),
         path('api/v1/avatars', include('apps.avatars.urls')),
         path('places/', include('place.urls')),
-        path('api/auth/', include('apps.authentication.urls')),
+        path('', include('apps.authentication.urls')),
     ],
 )
 
