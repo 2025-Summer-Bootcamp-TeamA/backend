@@ -1,4 +1,5 @@
 services:
+  # Django 백엔드 서비스 (외부 MySQL 사용)
   backend:
     build:
       context: .
@@ -9,6 +10,18 @@ services:
     volumes:
       - ./:/app
     restart: always
+    environment:
+      - DB_TYPE=${DB_TYPE}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-default-key}
+      - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+      - GS_BUCKET_NAME=${GS_BUCKET_NAME}
     command: |
       bash -c "python manage.py makemigrations &&
       python manage.py migrate &&
