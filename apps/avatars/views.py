@@ -7,14 +7,22 @@ from django.conf import settings
 from django.http import JsonResponse
 from rest_framework.parsers import MultiPartParser
 from rest_framework.decorators import api_view, parser_classes
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from django.core.files.storage import default_storage
+import logging
 
 # GCS 업로드 서비스 import
 from apps.gcs.storage_service import upload_image_to_gcs, upload_file_to_gcs
+from apps.videos.services.visionstory_service import VisionStoryService
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 VISIONSTORY_API_KEY = os.getenv("VISIONSTORY_API_KEY")
 VISIONSTORY_GENERATE_URL = "https://openapi.visionstory.ai/api/v1/avatar"
@@ -235,3 +243,80 @@ def generate_avatar(request):
             "retry_required": True,
             "suggestion": "더 선명하고 정면을 바라보는 인물 사진을 사용해보세요."
         }, status=400)
+
+
+class AvatarListView(APIView):
+    """아바타 목록 조회 API"""
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        operation_description="VisionStory에서 사용 가능한 아바타 목록을 조회합니다",
+        responses={
+            200: openapi.Response(
+                description="아바타 목록 조회 성공",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN, example=True),
+                        'data': openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'public_avatars': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                                'my_avatars': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                                'total_cnt': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                'latest_avatar_id': openapi.Schema(type=openapi.TYPE_STRING, description='가장 최근 생성된 아바타 ID'),
+                            }
+                        ),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, example='아바타 목록 조회 성공'),
+                    }
+                )
+            ),
+            500: openapi.Response(description="서버 오류")
+        }
+    )
+    def get(self, request):
+        """아바타 목록 조회"""
+        try:
+            logger.info("아바타 목록 조회 요청")
+            
+            visionstory_service = VisionStoryService()
+            avatars_data = visionstory_service.get_avatars()
+            
+            if not avatars_data:
+                return Response(
+                    {
+                        'success': False,
+                        'error': '아바타 목록 조회에 실패했습니다.',
+                        'message': 'VisionStory API 호출 실패'
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # 최신 아바타 ID도 함께 제공
+            latest_avatar_id = visionstory_service.get_latest_avatar_id()
+            
+            # 응답 데이터 구성
+            response_data = avatars_data.get('data', {})
+            response_data['latest_avatar_id'] = latest_avatar_id
+            
+            logger.info(f"아바타 목록 조회 성공: latest_avatar_id={latest_avatar_id}")
+            
+            return Response(
+                {
+                    'success': True,
+                    'data': response_data,
+                    'message': '아바타 목록 조회 성공'
+                },
+                status=status.HTTP_200_OK
+            )
+            
+        except Exception as e:
+            logger.error(f"아바타 목록 조회 중 오류 발생: {e}")
+            return Response(
+                {
+                    'success': False,
+                    'error': str(e),
+                    'message': '아바타 목록 조회 중 오류가 발생했습니다.'
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
