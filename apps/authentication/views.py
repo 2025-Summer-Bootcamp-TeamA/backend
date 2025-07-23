@@ -50,7 +50,7 @@ class GoogleLoginView(APIView):
 
         # 3. JWT 발급
         payload = {
-            # "user_id": user.id,  # user_id 제거
+            "user_id": user.id,  
             "exp": datetime.utcnow() + timedelta(hours=1),
             "iat": datetime.utcnow()
         }
@@ -64,7 +64,6 @@ class GoogleLoginView(APIView):
         # user.save()
 
         return Response({
-            # "userId": user.id,  # userId 반환 제거
             "accessToken": jwt_token,
             "refreshToken": refresh_token
         })

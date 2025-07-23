@@ -5,13 +5,14 @@ from django.conf.urls.static import static
 from rest_framework.permissions import AllowAny
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from apps.authentication.views import GoogleLoginView
 
 # 전체 경로를 위한 URL 패턴들 - 공통 경로 제거
 api_urls = [
     path('api/v1/posts', include('apps.posts.urls')),
     path('api/v1/videos', include('apps.videos.urls')),
     path('api/v1/avatars', include('apps.avatars.urls')),
-    path('places/', include('place.urls')),
+    path('places/', include('apps.place.urls')),
     path('docs/', include('apps.posts.urls')),  # 더미 경로로 공통 패턴 파괴
 ]
 
@@ -31,14 +32,15 @@ schema_view = get_schema_view(
         path('api/v1/posts', include('apps.posts.urls')),
         path('api/v1/videos', include('apps.videos.urls')),
         path('api/v1/avatars', include('apps.avatars.urls')),
-        path('places/', include('place.urls')),
+        path('places/', include('apps.place.urls')),
         path('', include('apps.authentication.urls')),
     ],
 )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('places/', include('place.urls')),
+    path('places/', include('apps.place.urls')),
+    path('users/google/', GoogleLoginView.as_view()),  # 구글 OAuth 엔드포인트 직접 연결
 ] + api_urls + [
     # Swagger API 문서
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),

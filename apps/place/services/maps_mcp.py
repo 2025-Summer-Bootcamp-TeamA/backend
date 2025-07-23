@@ -30,10 +30,10 @@ async def search_nearby_museums(latitude, longitude, radius, keyword):
     }
 
     try:
-        async with streamablehttp_client(url) as (read_stream, write_stream, _):
-            async with ClientSession(read_stream, write_stream) as session:
-                await session.initialize()
-                result = await session.call_tool("maps_search_places", payload)
-                return result
+        async with streamablehttp_client(url, timeout=30) as (read_stream, write_stream, _), \
+                   ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+            result = await session.call_tool("maps_search_places", payload)
+            return result
     except Exception as e:
-        raise RuntimeError(f"Google Maps MCP 호출 중 오류 발생: {str(e)}")
+        raise RuntimeError(f"Google Maps MCP 호출 중 오류 발생: {str(e)}") from e
