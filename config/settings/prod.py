@@ -4,7 +4,7 @@ from .base import *
 import pymysql
 pymysql.install_as_MySQLdb()
 
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = ["*"]
 
 
