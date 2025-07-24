@@ -7,21 +7,24 @@ WORKDIR /app
 RUN apt-get update && apt-get clean
 
 # requirements 파일들 복사
-COPY requirements.txt requirements-prod.txt ./
+COPY requirements.txt requirements-dev.txt ./
 
 # pip 업그레이드 및 의존성 설치
 RUN pip install --upgrade pip
-RUN pip install -r requirements-prod.txt
+RUN pip install -r requirements-dev.txt
 
 # 소스 코드 복사
 COPY . .
 
+# Django 정적 파일 수집
+RUN python manage.py collectstatic --noinput
+
 # Django 실행을 위한 환경 변수
 ENV PYTHONPATH=/app
-ENV DJANGO_SETTINGS_MODULE=config.settings.prod
+ENV DJANGO_SETTINGS_MODULE=config.settings.dev
 
 # 기본 포트 노출
 EXPOSE 8000
 
-# Gunicorn을 사용하여 Django 서버 실행
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Django 개발 서버 실행 (docker-compose.yml과 통일)
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

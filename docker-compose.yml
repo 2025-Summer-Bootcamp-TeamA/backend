@@ -22,7 +22,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
       - GS_BUCKET_NAME=${GS_BUCKET_NAME}
+    # Dockerfile의 CMD를 사용하거나 필요시 마이그레이션 추가
     command: |
-      bash -c "python manage.py makemigrations &&
-      python manage.py migrate &&
+      bash -c "python manage.py migrate &&
       python manage.py runserver 0.0.0.0:8000"
