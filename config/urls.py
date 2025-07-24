@@ -17,7 +17,7 @@ api_urls = [
     path('api/v1/avatars', include('apps.avatars.urls')),
     
     # Videos 관련  
-    path('api/v1/videos/', include('apps.videos.urls')),
+    path('api/v1/', include('apps.videos.urls')),
     
     # Places 관련
     path('api/v1/places/', include('apps.place.urls')),
@@ -43,7 +43,7 @@ schema_view = get_schema_view(
         path('api/v1/avatars', include('apps.avatars.urls')),
         
         # Videos
-        path('api/v1/videos/', include('apps.videos.urls')),
+        path('api/v1/', include('apps.videos.urls')),
         
         # Places
         path('api/v1/places/', include('apps.place.urls')),
