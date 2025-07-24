@@ -7,11 +7,13 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from apps.videos.views.video_creation_view import VideoCreationView
 from apps.videos.views.video_crud_views import VideoUploadView
+from apps.videos.views.visionstory_latest_view import VisionStoryLatestVideoView
 from apps.authentication.views import GoogleLoginView
 
 # 전체 경로를 위한 URL 패턴들 - 공통 경로 제거
 api_urls = [
     path('api/v1/videos/generate', VideoCreationView.as_view(), name='video_generation'),
+    path('api/v1/videos/visionstory', VisionStoryLatestVideoView.as_view(), name='visionstory_latest'),
     path('api/v1/videos', VideoUploadView.as_view(), name='video-upload'),
     path('api/v1/avatars', include('apps.avatars.urls')),
     path('places/', include('apps.place.urls')),
