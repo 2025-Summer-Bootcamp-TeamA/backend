@@ -12,7 +12,12 @@ from datetime import datetime, timedelta
 GOOGLE_TOKEN_INFO_URL = "https://oauth2.googleapis.com/tokeninfo"
 
 class GoogleLoginView(APIView):
-    @swagger_auto_schema(request_body=GoogleLoginSerializer)
+    @swagger_auto_schema(
+        tags=["oauth"],
+        operation_summary="Google OAuth 로그인",
+        operation_description="Google ID Token을 사용한 OAuth 로그인 및 JWT 토큰 발급",
+        request_body=GoogleLoginSerializer
+    )
     def post(self, request):
         serializer = GoogleLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

@@ -2,6 +2,8 @@ import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from apps.videos.services.visionstory_service import VisionStoryService
 
 logger = logging.getLogger(__name__)
@@ -10,6 +12,34 @@ logger = logging.getLogger(__name__)
 class VisionStoryLatestVideoView(APIView):
     """VisionStory에서 생성된 가장 최근 영상 URL을 조회하는 API"""
     
+    @swagger_auto_schema(
+        tags=["videos"],
+        operation_summary="최근 영상 조회",
+        operation_description="VisionStory에서 생성된 가장 최근 영상의 URL과 정보를 조회합니다",
+        responses={
+            200: openapi.Response(
+                description="최근 영상 조회 성공",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN, example=True),
+                        'data': openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'video_id': openapi.Schema(type=openapi.TYPE_STRING, description='영상 ID'),
+                                'video_url': openapi.Schema(type=openapi.TYPE_STRING, description='영상 URL'),
+                                'status': openapi.Schema(type=openapi.TYPE_STRING, description='영상 상태'),
+                                'created_at': openapi.Schema(type=openapi.TYPE_STRING, description='생성 시간'),
+                                'duration': openapi.Schema(type=openapi.TYPE_INTEGER, description='영상 길이(초)'),
+                            }
+                        ),
+                    }
+                )
+            ),
+            404: openapi.Response(description="생성된 영상이 없음"),
+            500: openapi.Response(description="서버 오류")
+        }
+    )
     def get(self, request):
         """
         VisionStory에서 생성된 가장 최근 영상의 URL을 반환합니다.

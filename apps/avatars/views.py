@@ -120,6 +120,8 @@ class AvatarListView(APIView):
     parser_classes = [MultiPartParser]  # 파일 업로드를 위한 파서 추가
     
     @swagger_auto_schema(
+        tags=["avatars"],
+        operation_summary="아바타 목록 조회",
         operation_description="VisionStory에서 사용 가능한 아바타 목록을 조회합니다",
         responses={
             200: openapi.Response(
@@ -192,6 +194,8 @@ class AvatarListView(APIView):
             )
 
     @swagger_auto_schema(
+        tags=["avatars"],
+        operation_summary="아바타 생성",
         operation_description="이미지를 업로드하면 아바타를 생성합니다. 실패 시 다른 이미지 업로드를 요청합니다.",
         manual_parameters=[
             openapi.Parameter(

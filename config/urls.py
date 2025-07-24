@@ -5,18 +5,22 @@ from django.conf.urls.static import static
 from rest_framework.permissions import AllowAny
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from apps.videos.views.video_creation_view import VideoCreationView
-from apps.videos.views.video_crud_views import VideoUploadView
-from apps.videos.views.visionstory_latest_view import VisionStoryLatestVideoView
+# Video views are now imported through apps.videos.urls
 from apps.authentication.views import GoogleLoginView
 
-# 전체 경로를 위한 URL 패턴들 - 공통 경로 제거
+# 전체 경로를 위한 URL 패턴들 - 모든 API는 /api/v1으로 시작하고 도메인별로 분류됨
 api_urls = [
-    path('api/v1/videos/generate', VideoCreationView.as_view(), name='video_generation'),
-    path('api/v1/videos/visionstory', VisionStoryLatestVideoView.as_view(), name='visionstory_latest'),
-    path('api/v1/videos', VideoUploadView.as_view(), name='video-upload'),
+    # OAuth 관련
+    path('api/v1/oauth/google', GoogleLoginView.as_view(), name='oauth_google'),
+    
+    # Avatars 관련
     path('api/v1/avatars', include('apps.avatars.urls')),
-    path('places/', include('apps.place.urls')),
+    
+    # Videos 관련  
+    path('api/v1/', include('apps.videos.urls')),
+    
+    # Places 관련
+    path('api/v1/places/', include('apps.place.urls')),
 ]
 
 # Swagger 설정 - 전체 경로 표시용
@@ -31,26 +35,30 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=[AllowAny],
-    patterns=[  # 실제 API만 포함
-        path('api/v1/videos', include('apps.videos.urls')),
+    patterns=[  # 실제 API만 포함 - /api/v1 prefix + 도메인별 태그 분류
+        # OAuth
+        path('api/v1/oauth/google', GoogleLoginView.as_view()),
+        
+        # Avatars  
         path('api/v1/avatars', include('apps.avatars.urls')),
-        path('places/', include('apps.place.urls')),
-        path('users/google/', GoogleLoginView.as_view()),  # 구글 OAuth 엔드포인트 Swagger에 포함
-        path('', include('apps.authentication.urls')),
+        
+        # Videos
+        path('api/v1/', include('apps.videos.urls')),
+        
+        # Places
+        path('api/v1/places/', include('apps.place.urls')),
     ],
 )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('places/', include('apps.place.urls')),
-    path('users/google/', GoogleLoginView.as_view()),  # 구글 OAuth 엔드포인트 직접 연결
 ] + api_urls + [
     # Swagger API 문서
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    path('api/auth/', include('apps.authentication.urls')),
+    # 모든 API가 /api/v1/ prefix로 통합됨 - Swagger는 도메인별 태그로 분류
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -16,10 +16,11 @@ MAX_RESULTS = 4
 class NearbyMuseumView(APIView):
 
     @swagger_auto_schema(
-        request_body=NearbyMuseumRequestSerializer,
-        responses={200: NearbyMuseumResponseSerializer(many=True)},
+        tags=["places"],
         operation_summary="근처 박물관 검색",
-        operation_description="사용자의 위도, 경도, 반경을 기반으로 Google Maps MCP를 사용해 근처 박물관을 검색합니다."
+        operation_description="사용자의 위도, 경도, 반경을 기반으로 Google Maps MCP를 사용해 근처 박물관을 검색합니다.",
+        request_body=NearbyMuseumRequestSerializer,
+        responses={200: NearbyMuseumResponseSerializer(many=True)}
     )
     def post(self, request, *args, **kwargs):
         serializer = NearbyMuseumRequestSerializer(data=request.data)

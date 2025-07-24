@@ -27,6 +27,8 @@ class VideoCreationView(APIView):
         self.video_generator = VideoGenerator()
     
     @swagger_auto_schema(
+        tags=["videos"],
+        operation_summary="작품 기반 영상 생성",
         operation_description="OCR 텍스트를 기반으로 작품 정보를 추출하고 영상을 자동 생성합니다",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
