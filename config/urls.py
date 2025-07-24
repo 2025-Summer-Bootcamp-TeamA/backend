@@ -8,16 +8,16 @@ from drf_yasg import openapi
 # Video views are now imported through apps.videos.urls
 from apps.authentication.views import GoogleLoginView
 
-# 전체 경로를 위한 URL 패턴들 - 모든 API는 /api/v1으로 시작
+# 전체 경로를 위한 URL 패턴들 - 모든 API는 /api/v1으로 시작하고 도메인별로 분류됨
 api_urls = [
     # OAuth 관련
-    path('oauth/google', GoogleLoginView.as_view(), name='oauth_google'),
+    path('api/v1/oauth/google', GoogleLoginView.as_view(), name='oauth_google'),
     
     # Avatars 관련
-    path('avatars', include('apps.avatars.urls')),
+    path('api/v1/avatars', include('apps.avatars.urls')),
     
     # Videos 관련  
-    path('', include('apps.videos.urls')),
+    path('api/v1/videos/', include('apps.videos.urls')),
     
     # Places 관련
     path('api/v1/places/', include('apps.place.urls')),
@@ -35,15 +35,15 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=[AllowAny],
-    patterns=[  # 실제 API만 포함 - 모든 API는 /api/v1으로 시작
+    patterns=[  # 실제 API만 포함 - /api/v1 prefix + 도메인별 태그 분류
         # OAuth
-        path('oauth/google', GoogleLoginView.as_view()),
+        path('api/v1/oauth/google', GoogleLoginView.as_view()),
         
         # Avatars  
-        path('avatars', include('apps.avatars.urls')),
+        path('api/v1/avatars', include('apps.avatars.urls')),
         
         # Videos
-        path('videos/', include('apps.videos.urls')),
+        path('api/v1/videos/', include('apps.videos.urls')),
         
         # Places
         path('api/v1/places/', include('apps.place.urls')),
@@ -58,7 +58,7 @@ urlpatterns = [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    # 기존 api/auth/ 경로는 제거됨 - 모든 인증은 /api/v1/oauth/로 통합
+    # 모든 API가 /api/v1/ prefix로 통합됨 - Swagger는 도메인별 태그로 분류
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
