@@ -13,7 +13,6 @@ dependencies = [
     "djangorestframework>=3.16.0",
     "django-cors-headers>=4.7.0",
     "drf-yasg>=1.21.0",
-    "python-dotenv>=1.1.0",
     "pillow>=11.0.0",
     "google-generativeai>=0.8.5",
     "google-auth>=2.40.3",
@@ -21,16 +20,13 @@ dependencies = [
     "vertexai>=1.43.0",
     "python-decouple>=3.8",
     "django-storages>=1.14.6",
-    "openai>=1.97.0",
-    "pyjwt>=2.10.1",
-    "mcp[cli]>=1.12.0",
-    "google-cloud-storage>=2.19.0",
-    "pymysql>=1.1.0",
-    "google-cloud-storage>=3.2.0",
-    "django-storages>=1.14.6",
     "openai>=1.97.1",
     "pyjwt>=2.10.1",
+    "mcp[cli]>=1.12.0",
+    "google-cloud-storage<3.0.0",
+    "pymysql>=1.1.0",
     "requests>=2.32.4",
+    "python-dotenv>=1.1.1",
 ]
 
 [project.optional-dependencies]
@@ -51,10 +47,9 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = []  # Django 프로젝트는 패키지 배포용이 아님
+packages = []
 
 [tool.uv]
-# 개발 의존성 기본 포함
 dev-dependencies = [
     "pytest>=7.0.0",
     "pytest-django>=4.5.0",

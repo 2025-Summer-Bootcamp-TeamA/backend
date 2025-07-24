@@ -9,6 +9,7 @@ services:
       - "8000:8000"
     volumes:
       - ./:/app
+      - ./credential/gcp-credential.json:/app/credential/gcp-credential.json
     restart: always
     environment:
       - DB_TYPE=${DB_TYPE}
@@ -20,9 +21,9 @@ services:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-default-key}
       - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
-      - GS_BUCKET_NAME=${GS_BUCKET_NAME}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credential/gcp-credential.json
+      #   - GS_BUCKET_NAME=${GS_BUCKET_NAME}
     command: |
-      bash -c "python manage.py makemigrations &&
-      python manage.py migrate &&
-      python manage.py runserver 0.0.0.0:8000"
+      bash -c "uv run python manage.py makemigrations &&
+      uv run python manage.py migrate &&
+      uv run python manage.py runserver 0.0.0.0:8000"
