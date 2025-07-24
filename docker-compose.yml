@@ -27,3 +27,43 @@ services:
       bash -c "uv run python manage.py makemigrations &&
       uv run python manage.py migrate &&
       uv run python manage.py runserver 0.0.0.0:8000"
+
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: always
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery
+    command: uv run celery -A config worker --loglevel=info
+    volumes:
+      - ./:/app
+      - ./credential/gcp-credential.json:/app/credential/gcp-credential.json
+    environment:
+      - DB_TYPE=${DB_TYPE}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-default-key}
+      - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credential/gcp-credential.json
+    depends_on:
+      - backend
+      - redis
+      - rabbitmq
