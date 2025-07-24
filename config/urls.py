@@ -17,7 +17,7 @@ api_urls = [
     path('avatars', include('apps.avatars.urls')),
     
     # Videos 관련  
-    path('videos', include('apps.videos.urls')),
+    path('', include('apps.videos.urls')),
     
     # Places 관련
     path('api/v1/places/', include('apps.place.urls')),
@@ -37,13 +37,13 @@ schema_view = get_schema_view(
     permission_classes=[AllowAny],
     patterns=[  # 실제 API만 포함 - 모든 API는 /api/v1으로 시작
         # OAuth
-        path('api/v1/oauth/google/', GoogleLoginView.as_view()),
+        path('oauth/google', GoogleLoginView.as_view()),
         
         # Avatars  
-        path('api/v1/avatars/', include('apps.avatars.urls')),
+        path('avatars', include('apps.avatars.urls')),
         
         # Videos
-        path('api/v1/videos/', include('apps.videos.urls')),
+        path('videos/', include('apps.videos.urls')),
         
         # Places
         path('api/v1/places/', include('apps.place.urls')),
