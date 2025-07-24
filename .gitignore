@@ -11,6 +11,9 @@ build/
 .eggs/
 *.log
 
+static/
+staticfiles/
+
 # Django
 db.sqlite3
 *.sqlite3

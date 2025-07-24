@@ -1,39 +1,55 @@
+version: "3.8"
 services:
-  # Django 백엔드 서비스 (외부 MySQL 사용)
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  web:
+    build: .
     container_name: backend
     ports:
       - "8000:8000"
-    volumes:
-      - ./:/app
-      - ./credential/gcp-credential.json:/app/credential/gcp-credential.json
-    restart: always
+    depends_on:
+      - rabbitmq
+      - redis
     environment:
-      - DB_TYPE=${DB_TYPE}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credential/teama-service-account.json
+      - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
+      - SMITHERY_API_KEY=${SMITHERY_API_KEY:-dummy_key}
+      - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY:-dummy_key}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-dummy_key}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-default-key}
-      - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/credential/gcp-credential.json
-      #   - GS_BUCKET_NAME=${GS_BUCKET_NAME}
-    command: |
-      bash -c "uv run python manage.py makemigrations &&
-      uv run python manage.py migrate &&
-      uv run python manage.py runserver 0.0.0.0:8000"
+      - DB_TYPE=${DB_TYPE:-sqlite}
+      - DB_HOST=${DB_HOST:-localhost}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_NAME=${DB_NAME:-backend}
+    volumes:
+      - ./credential:/app/credential
 
-  redis:
-    image: redis:7
-    container_name: redis
-    ports:
-      - "6379:6379"
-    restart: always
+  celery:
+    build: .
+    container_name: celery
+    command: celery -A config worker --loglevel=info
+    depends_on:
+      - rabbitmq
+      - redis
+    environment:
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credential/teama-service-account.json
+      - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
+      - SMITHERY_API_KEY=${SMITHERY_API_KEY:-dummy_key}
+      - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY:-dummy_key}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-dummy_key}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-default-key}
+      - DB_TYPE=${DB_TYPE:-sqlite}
+      - DB_HOST=${DB_HOST:-localhost}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_NAME=${DB_NAME:-backend}
+    volumes:
+      - ./credential:/app/credential
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -41,29 +57,9 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
-    restart: always
 
-  celery:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: celery
-    command: uv run celery -A config worker --loglevel=info
-    volumes:
-      - ./:/app
-      - ./credential/gcp-credential.json:/app/credential/gcp-credential.json
-    environment:
-      - DB_TYPE=${DB_TYPE}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-default-key}
-      - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/credential/gcp-credential.json
-    depends_on:
-      - backend
-      - redis
-      - rabbitmq
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
