@@ -45,7 +45,7 @@ services:
       python manage.py runserver 0.0.0.0:8000"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`api.hiedu.site`)"
+      - "traefik.http.routers.backend.rule=Host(`api.hiedu.site`) || Host(`hiedu.site`)"
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
