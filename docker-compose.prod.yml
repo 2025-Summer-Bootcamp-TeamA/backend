@@ -54,3 +54,7 @@ services:
 
 volumes:
   traefik-certificates:
+
+networks:
+  traefiknet:
+    driver: bridge
