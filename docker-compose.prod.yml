@@ -18,7 +18,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8090:8090"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-certificates:/letsencrypt
@@ -29,7 +28,6 @@ services:
       - "traefik.http.routers.mydashboard.entrypoints=websecure"
       - "traefik.http.routers.mydashboard.service=api@internal"
       - "traefik.http.routers.mydashboard.tls.certresolver=letsencrypt"
-      - "traefik.http.services.mydashboard.loadbalancer.server.port=8090"
       # BasicAuth 인증 미들웨어 적용
       - "traefik.http.routers.mydashboard.middlewares=mydashboard-auth"
       - "traefik.http.middlewares.mydashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}"
@@ -40,8 +38,9 @@ services:
       dockerfile: Dockerfile
     container_name: backend
     restart: always
-    volumes:
-      - ./:/app
+    # 프로덕션 환경에서는 코드가 이미지에 포함되어 있으므로 볼륨 마운트 불필요
+    # volumes:
+    #   - ./:/app  # 개발 환경 전용
     env_file:
       - .env
     command: >
