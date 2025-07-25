@@ -34,6 +34,7 @@ schema_view = get_schema_view(
         license=openapi.License(name="MIT License"),
     ),
     public=True,
+    schemes=['http', 'https'],
     permission_classes=[AllowAny],
     patterns=[  # 실제 API만 포함 - /api/v1 prefix + 도메인별 태그 분류
         # OAuth
