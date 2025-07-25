@@ -42,7 +42,6 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('places/', include('apps.place.urls')),
     path('users/google/', GoogleLoginView.as_view()),  # 구글 OAuth 엔드포인트 직접 연결
 ] + api_urls + [
     # Swagger API 문서
