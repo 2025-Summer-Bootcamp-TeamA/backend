@@ -23,11 +23,7 @@ dependencies = [
     "openai>=1.97.1",
     "pyjwt>=2.10.1",
     "mcp[cli]>=1.12.0",
-<<<<<<< HEAD
     "google-cloud-storage<3.0.0",
-=======
-    "google-cloud-storage>=2.19.0,<3.0.0",
->>>>>>> 70ada5f648595aa32c707a6c1388cd79d75faa7a
     "pymysql>=1.1.0",
     "requests>=2.32.4",
     "python-dotenv>=1.1.1",
@@ -58,7 +54,6 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 packages = []
 
-<<<<<<< HEAD
 [tool.uv]
 dev-dependencies = [
     "pytest>=7.0.0",
@@ -68,8 +63,6 @@ dev-dependencies = [
     "flake8>=6.0.0",
 ]
 
-=======
->>>>>>> 70ada5f648595aa32c707a6c1388cd79d75faa7a
 [tool.black]
 line-length = 88
 target-version = ['py311']

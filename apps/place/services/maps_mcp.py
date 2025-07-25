@@ -5,7 +5,7 @@ import base64
 import json
 import logging
 import math
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
