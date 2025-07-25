@@ -38,9 +38,6 @@ services:
       dockerfile: Dockerfile
     container_name: backend
     restart: always
-    # 프로덕션 환경에서는 코드가 이미지에 포함되어 있으므로 볼륨 마운트 불필요
-    # volumes:
-    #   - ./:/app  # 개발 환경 전용
     env_file:
       - .env
     command: >
