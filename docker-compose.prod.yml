@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v2.9
+    container_name: traefik
+    command: 
+      - "--api.insecure=false"
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=yuriswdev@gmail.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certificates:/letsencrypt
+    labels:
+      - "traefik.enable=true"
+      # Traefik 대시보드 접근 (대시보드 주소: https://traefik.hiedu.site)
+      - "traefik.http.routers.mydashboard.rule=Host(`traefik.hiedu.site`)"
+      - "traefik.http.routers.mydashboard.entrypoints=websecure"
+      - "traefik.http.routers.mydashboard.service=api@internal"
+      - "traefik.http.routers.mydashboard.tls.certresolver=letsencrypt"
+      # BasicAuth 인증 미들웨어 적용
+      - "traefik.http.routers.mydashboard.middlewares=mydashboard-auth"
+      - "traefik.http.middlewares.mydashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend
+    restart: always
+    env_file:
+      - .env
+    command: >
+      bash -c "python manage.py migrate &&
+      python manage.py runserver 0.0.0.0:8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.hiedu.site`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+
+volumes:
+  traefik-certificates:
