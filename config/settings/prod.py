@@ -51,3 +51,12 @@ CORS_ORIGIN_ALLOW_ALL = False
 # HTTPS 보안 설정 (Traefik 뒤에서 실행될 때)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = False  # Traefik에서 리다이렉트 처리
+
+# 추가 HTTPS 보안 설정
+SECURE_HSTS_SECONDS = 31536000  # 1년 (HSTS: HTTP Strict Transport Security)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True  # 서브도메인에도 HSTS 적용
+SECURE_HSTS_PRELOAD = True  # HSTS preload 리스트 포함 가능
+SECURE_CONTENT_TYPE_NOSNIFF = True  # MIME 타입 스니핑 방지
+SECURE_BROWSER_XSS_FILTER = True  # XSS 필터 활성화
+SESSION_COOKIE_SECURE = True  # 세션 쿠키 HTTPS 전용
+CSRF_COOKIE_SECURE = True  # CSRF 쿠키 HTTPS 전용
