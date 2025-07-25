@@ -22,7 +22,11 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-q6z$d70f^g6b!=wcuk^
 
 # 개발용 설정
 DEBUG = True
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['hiedu.site', 'api.hiedu.site', 'localhost', '127.0.0.1']
+
+# Traefik 등의 프록시 환경에서 HTTPS 인식용
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
 # 앱 등록
 INSTALLED_APPS = [
