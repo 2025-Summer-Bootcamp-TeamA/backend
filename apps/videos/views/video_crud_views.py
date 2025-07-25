@@ -15,6 +15,8 @@ class VideoUploadView(APIView):
     permission_classes = [AllowAny]
     
     @swagger_auto_schema(
+        tags=["videos"],
+        operation_summary="영상 저장",
         operation_description="영상을 자동으로 저장합니다",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,

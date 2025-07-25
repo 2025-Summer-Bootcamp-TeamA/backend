@@ -1,6 +1,3 @@
 from django.urls import path
-from .views import GoogleLoginView
 
-urlpatterns = [
-    path('google', GoogleLoginView.as_view()),
-]
+urlpatterns = []
