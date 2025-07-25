@@ -35,6 +35,7 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=[AllowAny],
+    schemes=['https'],  # Swagger UI에서 HTTPS만 사용하도록 강제
     patterns=[  # 실제 API만 포함 - /api/v1 prefix + 도메인별 태그 분류
         # OAuth
         path('api/v1/oauth/google', GoogleLoginView.as_view()),

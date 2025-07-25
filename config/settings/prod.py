@@ -47,3 +47,7 @@ else:
     }
 
 CORS_ORIGIN_ALLOW_ALL = False
+
+# HTTPS 보안 설정 (Traefik 뒤에서 실행될 때)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = False  # Traefik에서 리다이렉트 처리
