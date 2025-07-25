@@ -21,7 +21,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-q6z$d70f^g6b!=wcuk^$bntvd!p1^-n0pxlmg_c*a_vu0nlvj9')
 
 # 개발용 설정
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = ['hiedu.site', 'api.hiedu.site', 'localhost', '127.0.0.1']
 
 # Traefik 등의 프록시 환경에서 HTTPS 인식용
