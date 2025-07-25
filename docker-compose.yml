@@ -1,28 +1,67 @@
+version: "3.9"
+
 services:
-  # Django 백엔드 서비스 (외부 MySQL 사용)
+  traefik:
+    image: traefik:v2.9
+    container_name: traefik
+    command: 
+      - "--api.insecure=false"
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=yuriswdev@gmail.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8090:8090"  # Traefik 대시보드
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - traefik-certificates:/letsencrypt
+    labels:
+      - "traefik.enable=true"
+      # Traefik 대시보드 접근 (대시보드 주소: https://traefik.hiedu.site)
+      - "traefik.http.routers.mydashboard.rule=Host(`traefik.hiedu.site`)"
+      - "traefik.http.routers.mydashboard.entrypoints=websecure"
+      - "traefik.http.routers.mydashboard.service=api@internal"
+      - "traefik.http.routers.mydashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mydashboard.loadbalancer.server.port=8090"
+
   backend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: backend
-    ports:
-      - "8000:8000"
+    restart: always
     volumes:
       - ./:/app
-    restart: always
-    environment:
-      - DB_TYPE=${DB_TYPE}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-default-key}
-      - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
-      - GS_BUCKET_NAME=${GS_BUCKET_NAME}
-    # Dockerfile의 CMD를 사용하거나 필요시 마이그레이션 추가
-    command: |
+    env_file:
+      - .env
+    # environment:
+    #   - DB_TYPE=${DB_TYPE}
+    #   - DB_HOST=${DB_HOST}
+    #   - DB_PORT=${DB_PORT}
+    #   - DB_USER=${DB_USER}
+    #   - DB_PASSWORD=${DB_PASSWORD}
+    #   - DB_NAME=${DB_NAME}
+    #   - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-default-key}
+    #   - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY}
+    #   - OPENAI_API_KEY=${OPENAI_API_KEY}
+    #   - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+    #   - GS_BUCKET_NAME=${GS_BUCKET_NAME}
+    command: >
       bash -c "python manage.py migrate &&
       python manage.py runserver 0.0.0.0:8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.hiedu.site`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+
+volumes:
+  traefik-certificates:
