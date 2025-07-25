@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # 상수 정의
 MAX_RESULTS = 4
-DEFAULT_RADIUS = 3000
+DEFAULT_RADIUS = 5000
 DEFAULT_KEYWORD = "museum"
 
 
@@ -83,8 +83,8 @@ class NearbyMuseumView(APIView):
             # 3. MCP 서비스 호출
             result = async_to_sync(search_nearby_museums)(lat, lng, radius, keyword)
             
-            # 4. 응답 처리
-            places = process_mcp_response(result, MAX_RESULTS)
+            # 4. 응답 처리 (사용자 위치 기반 거리 계산 및 반경 필터링)
+            places = process_mcp_response(result, lat, lng, radius, MAX_RESULTS)
             
             # 5. 응답 데이터 검증
             response_serializer = NearbyMuseumResponseSerializer(data=places, many=True)

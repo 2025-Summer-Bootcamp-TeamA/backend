@@ -4,6 +4,7 @@ import os
 import base64
 import json
 import logging
+import math
 from typing import Dict, List, Any, Optional
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
@@ -24,6 +25,39 @@ class MapsConfigError(MapsServiceError):
 class MapsAPIError(MapsServiceError):
     """Maps API 호출 관련 예외"""
     pass
+
+
+def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    하버사인 공식을 사용하여 두 좌표 간의 거리를 미터 단위로 계산합니다.
+    
+    Args:
+        lat1, lon1: 첫 번째 지점의 위도, 경도
+        lat2, lon2: 두 번째 지점의 위도, 경도
+        
+    Returns:
+        float: 두 지점 사이의 거리 (미터)
+    """
+    # 지구 반지름 (미터)
+    R = 6371000
+    
+    # 위도/경도를 라디안으로 변환
+    φ1 = math.radians(lat1)
+    φ2 = math.radians(lat2)
+    Δφ = math.radians(lat2 - lat1)
+    Δλ = math.radians(lon2 - lon1)
+    
+    # 하버사인 공식
+    a = (math.sin(Δφ / 2) * math.sin(Δφ / 2) +
+         math.cos(φ1) * math.cos(φ2) *
+         math.sin(Δλ / 2) * math.sin(Δλ / 2))
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    # 거리 계산 (미터)
+    distance = R * c
+    
+    # 소수점 둘째 자리까지 반올림
+    return round(distance, 2)
 
 
 def get_mcp_url() -> str:
@@ -291,16 +325,19 @@ async def search_nearby_museums(
     """
 
 
-def process_mcp_response(result: Any, max_results: int = 4) -> List[Dict[str, Any]]:
+def process_mcp_response(result: Any, user_lat: float, user_lon: float, radius: int, max_results: int = 4) -> List[Dict[str, Any]]:
     """
     MCP 응답을 처리하여 박물관 목록을 반환합니다.
     
     Args:
         result: MCP 응답 결과
+        user_lat: 사용자 위도
+        user_lon: 사용자 경도
+        radius: 검색 반경 (미터)
         max_results: 최대 반환할 결과 수
         
     Returns:
-        List[Dict]: 처리된 박물관 목록
+        List[Dict]: 처리된 박물관 목록 (거리 정보 포함, 반경 내만)
         
     Raises:
         MapsAPIError: 응답 처리 중 오류가 발생했을 때
@@ -334,29 +371,45 @@ def process_mcp_response(result: Any, max_results: int = 4) -> List[Dict[str, An
             logger.info("검색 결과가 없습니다")
             return []
         
-        # 데이터 정리 및 순위 부여
+        # 데이터 정리 및 거리 계산
         processed_places = []
-        for idx, place in enumerate(places[:max_results]):
+        for place in places[:max_results]:
             # 필수 필드 검증
             required_fields = ["name", "address", "place_id"]
             if not all(field in place for field in required_fields):
                 logger.warning(f"필수 필드가 누락된 place 건너뜀: {place}")
                 continue
                 
-            # 불필요한 필드 제거
+            # 거리 계산
+            place_lat = place.get("latitude", 0.0)
+            place_lon = place.get("longitude", 0.0)
+            distance = calculate_distance(user_lat, user_lon, place_lat, place_lon)
+            
+            # 불필요한 필드 제거 및 거리 정보 추가
             processed_place = {
                 "name": place.get("name", ""),
                 "address": place.get("address", ""),
                 "place_id": place.get("place_id", ""),
-                "latitude": place.get("latitude", 0.0),
-                "longitude": place.get("longitude", 0.0),
-                "rank": idx + 1,
-                "web_url": place.get("web_url", None)
+                "latitude": place_lat,
+                "longitude": place_lon,
+                "web_url": place.get("web_url", None),
+                "distance_m": distance
             }
             
-            processed_places.append(processed_place)
+            # ✅ 검색 반경 내에 있는 경우만 추가
+            if distance <= radius:
+                processed_places.append(processed_place)
+            else:
+                logger.debug(f"반경 밖 장소 제외: {place.get('name')} ({distance:.2f}m > {radius}m)")
         
-        logger.info(f"처리된 박물관 수: {len(processed_places)}")
+        # 🎯 거리 순으로 정렬 (가까운 순)
+        processed_places.sort(key=lambda x: x["distance_m"])
+        
+        # 🏆 정렬된 순서에 따라 rank 부여
+        for idx, place in enumerate(processed_places):
+            place["rank"] = idx + 1
+        
+        logger.info(f"처리된 박물관 수: {len(processed_places)} (반경 {radius}m 내, 거리순 정렬 완료)")
         return processed_places
         
     except json.JSONDecodeError as e:

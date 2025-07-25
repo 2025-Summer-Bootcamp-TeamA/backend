@@ -16,10 +16,10 @@ class NearbyMuseumRequestSerializer(serializers.Serializer):
     )
     radius = serializers.IntegerField(
         required=False, 
-        default=3000, 
+        default=5000, 
         min_value=1,
         max_value=50000,
-        help_text="검색 반경 (미터, 기본값: 3000)"
+        help_text="검색 반경 (미터, 기본값: 5000)"
     )
     keyword = serializers.CharField(
         required=False, 
@@ -42,6 +42,7 @@ class NearbyMuseumResponseSerializer(serializers.Serializer):
         required=False,
         help_text="웹사이트 URL (없을 수 있음)"
     )
+    distance_m = serializers.FloatField(help_text="사용자 위치로부터의 거리 (미터)")
 
 
 class ErrorResponseSerializer(serializers.Serializer):
