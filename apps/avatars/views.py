@@ -15,7 +15,7 @@ from django.core.files.storage import default_storage
 import logging
 
 # GCS 업로드 서비스 import
-from apps.gcs.storage_service import upload_image_to_gcs, upload_file_to_gcs
+from apps.gcs.storage_service import upload_image_to_gcs, upload_file_to_gcs, move_gcs_file
 from apps.videos.services.visionstory_service import VisionStoryService
 
 load_dotenv()
@@ -332,10 +332,10 @@ class AvatarListView(APIView):
                     # VisionStory API 성공 후 영구 GCS 저장
                     logger.info(f"VisionStory 아바타 생성 성공: {avatar_id}, 영구 GCS 저장 시작")
                     
-                    # 영구 저장을 위해 다시 GCS에 업로드
-                    file_url = upload_file_to_gcs(image_file, folder="avatars")
+                    # 임시 폴더에서 영구 폴더로 파일 이동 (재업로드 대신)
+                    file_url = move_gcs_file(temp_file_url, "temp_avatars", "avatars")
                     if not file_url:
-                        logger.warning("영구 GCS 저장 실패, 임시 URL 사용")
+                        logger.warning("GCS 파일 이동 실패, 임시 URL 사용")
                         file_url = temp_file_url
                     
                     return Response({
