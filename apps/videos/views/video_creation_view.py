@@ -110,14 +110,17 @@ class VideoCreationView(APIView):
                 aspect_ratio=aspect_ratio,
                 resolution=resolution,
                 emotion=emotion,
-                background_color=background_color
+                background_color=background_color,
+                wait_for_completion=False  # 즉시 응답을 위해 대기하지 않음
             )
             
             # 4단계: 응답 데이터 구성
             response_data = {
-                'visionstoryUrl': video_info.video_url,
+                'videoId': video_info.video_id,  # 영상 ID 추가
+                'visionstoryUrl': video_info.video_url,  # 아직 비어있을 수 있음
                 'thumbnailUrl': video_info.thumbnail_url,
                 'duration': video_info.duration,
+                'status': video_info.status,  # 상태 정보 추가
                 'artworkInfo': {
                     'title': artwork_info.basic_info.title if artwork_info.basic_info and artwork_info.basic_info.title else '',
                     'artist': artwork_info.basic_info.artist if artwork_info.basic_info and artwork_info.basic_info.artist else '',
@@ -126,8 +129,8 @@ class VideoCreationView(APIView):
                 }
             }
             
-            logger.info("영상 생성 완료")
-            return Response(response_data, status=status.HTTP_201_CREATED)
+            logger.info(f"영상 생성 요청 완료: video_id={video_info.video_id}, status={video_info.status}")
+            return Response(response_data, status=status.HTTP_202_ACCEPTED)  # 202 Accepted로 변경
                 
         except Exception as e:
             logger.error(f"영상 생성 중 오류: {str(e)}")
