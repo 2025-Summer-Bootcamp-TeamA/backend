@@ -140,8 +140,7 @@ class VideoCreationView(APIView):
             # 4단계: 응답 데이터 구성
             response_data = {
                 'videoId': video_info.video_id,  # 영상 ID 추가
-                'visionstoryUrl': gcs_video_url,  # GCS URL
-                'thumbnailUrl': video_info.thumbnail_url,
+                'videoUrl': gcs_video_url,  # GCS URL
                 'status': video_info.status,  # 상태 정보 추가
                 'artworkInfo': {
                     'title': artwork_info.basic_info.title if artwork_info.basic_info and artwork_info.basic_info.title else '',
