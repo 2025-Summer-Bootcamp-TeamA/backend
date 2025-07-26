@@ -3,28 +3,15 @@ FROM python:3.11
 # 작업 디렉토리 설정
 WORKDIR /app
 
-# 시스템 패키지 업데이트
+# 의존성 파일만 먼저 복사 (캐시 최적화)
+COPY requirements.txt ./
+
+# 시스템 패키지 업데이트 및 의존성 설치
 RUN apt-get update && apt-get clean
-
-# requirements 파일들 복사
-COPY requirements.txt requirements-dev.txt ./
-
-# pip 업그레이드 및 의존성 설치
-RUN pip install --upgrade pip
-RUN pip install -r requirements-dev.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # 소스 코드 복사
 COPY . .
 
-# Django 정적 파일 수집
-RUN python manage.py collectstatic --noinput
-
-# Django 실행을 위한 환경 변수
-ENV PYTHONPATH=/app
-ENV DJANGO_SETTINGS_MODULE=config.settings.dev
-
-# 기본 포트 노출
-EXPOSE 8000
-
-# Django 개발 서버 실행 (docker-compose.yml과 통일)
+# Django 서버 실행
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
