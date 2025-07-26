@@ -49,7 +49,7 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=[AllowAny],
-    schemes=['https'] if not settings.DEBUG else ['http', 'https'],  # DEBUG 환경에 따라 분기 처리
+    url='https://hiedu.site/',
     patterns=[  # 실제 API만 포함 - /api/v1 prefix + 도메인별 태그 분류
         # OAuth
         path('api/v1/oauth/google', GoogleLoginView.as_view()),
