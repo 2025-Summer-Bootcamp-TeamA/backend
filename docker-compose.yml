@@ -36,7 +36,7 @@ services:
       - rabbitmq
       - redis
     environment:
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:?must_be_set}
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
