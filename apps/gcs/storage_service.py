@@ -127,4 +127,9 @@ def upload_image_to_gcs(image_url: str, folder: str = "avatars") -> Optional[str
 
 def upload_file_to_gcs(file_obj, folder: str = "uploads") -> Optional[str]:
     """Django 파일을 GCS에 업로드"""
-    return GCSStorageService.upload_django_file(file_obj, folder) 
+    return GCSStorageService.upload_django_file(file_obj, folder)
+
+
+def upload_video_to_gcs(video_url: str, folder: str = "videos") -> Optional[str]:
+    """영상 URL을 GCS에 업로드"""
+    return GCSStorageService.upload_file_from_url(video_url, folder) 

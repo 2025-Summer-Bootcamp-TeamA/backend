@@ -5,6 +5,7 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from apps.videos.services.visionstory_service import VisionStoryService
+from apps.gcs.storage_service import upload_video_to_gcs
 
 logger = logging.getLogger(__name__)
 
@@ -184,12 +185,29 @@ class VisionStoryVideoStatusView(APIView):
                     "error": "영상을 찾을 수 없습니다."
                 }, status=status.HTTP_404_NOT_FOUND)
             
+            # VisionStory URL을 GCS에 업로드
+            visionstory_video_url = status_info.get("video_url", "")
+            gcs_video_url = None
+            
+            if visionstory_video_url and status_info.get("status") == "created":
+                logger.info(f"VisionStory 영상을 GCS에 업로드 시작: {visionstory_video_url}")
+                gcs_video_url = upload_video_to_gcs(visionstory_video_url, folder="videos")
+                
+                if gcs_video_url:
+                    logger.info(f"GCS 업로드 성공: {gcs_video_url}")
+                else:
+                    logger.warning("GCS 업로드 실패, VisionStory URL 사용")
+                    gcs_video_url = visionstory_video_url
+            else:
+                # 영상이 아직 생성 중이거나 URL이 없는 경우
+                gcs_video_url = visionstory_video_url
+            
             # 성공 응답 (썸네일 URL 제외)
             response_data = {
                 "success": True,
                 "data": {
                     "video_id": status_info.get("video_id", video_id),
-                    "video_url": status_info.get("video_url", ""),
+                    "video_url": gcs_video_url,  # GCS URL 또는 VisionStory URL
                     "status": status_info.get("status", "unknown"),
                     "created_at": status_info.get("created_at", "")
                 }

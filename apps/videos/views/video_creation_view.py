@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny
 from apps.core.services import ArtworkInfoOrchestrator
 from apps.videos.services import VideoGenerator
 from apps.videos.services.visionstory_service import VisionStoryService
+from apps.gcs.storage_service import upload_video_to_gcs
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import logging
@@ -101,7 +102,7 @@ class VideoCreationView(APIView):
                 museum_name=museum_name
             ))
             
-            # 3단계: VisionStory 영상 생성
+            # 3단계: VisionStory 영상 생성 (완성될 때까지 대기)
             logger.info("VisionStory 영상 생성 시작")
             video_info = self.video_generator.generate_video(
                 artwork_info=artwork_info,
@@ -111,12 +112,35 @@ class VideoCreationView(APIView):
                 resolution=resolution,
                 emotion=emotion,
                 background_color=background_color,
-                wait_for_completion=False  # 즉시 응답을 위해 대기하지 않음
+                wait_for_completion=True  # 영상이 완성될 때까지 대기
             )
+            
+            # VisionStory URL을 GCS에 업로드 (영상이 완성된 경우에만)
+            visionstory_video_url = video_info.video_url
+            gcs_video_url = None
+            
+            if visionstory_video_url and video_info.status == "created":
+                logger.info(f"VisionStory 영상을 GCS에 업로드 시작: {visionstory_video_url}")
+                gcs_video_url = upload_video_to_gcs(visionstory_video_url, folder="videos")
+                
+                if gcs_video_url:
+                    logger.info(f"GCS 업로드 성공: {gcs_video_url}")
+                else:
+                    logger.warning("GCS 업로드 실패, VisionStory URL 사용")
+                    gcs_video_url = visionstory_video_url
+            else:
+                # 영상 생성 실패 또는 URL이 없는 경우
+                logger.error(f"영상 생성 실패: status={video_info.status}, url={visionstory_video_url}")
+                return Response({
+                    'error': '영상 생성에 실패했습니다.',
+                    'status': video_info.status,
+                    'error_message': video_info.error_message
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
             # 4단계: 응답 데이터 구성
             response_data = {
                 'videoId': video_info.video_id,  # 영상 ID 추가
+                'visionstoryUrl': gcs_video_url,  # GCS URL
                 'thumbnailUrl': video_info.thumbnail_url,
                 'status': video_info.status,  # 상태 정보 추가
                 'artworkInfo': {
@@ -127,8 +151,8 @@ class VideoCreationView(APIView):
                 }
             }
             
-            logger.info(f"영상 생성 요청 완료: video_id={video_info.video_id}, status={video_info.status}")
-            return Response(response_data, status=status.HTTP_202_ACCEPTED)  # 202 Accepted로 변경
+            logger.info(f"영상 생성 및 GCS 업로드 완료: video_id={video_info.video_id}")
+            return Response(response_data, status=status.HTTP_201_CREATED)  # 201 Created로 변경
                 
         except Exception as e:
             logger.error(f"영상 생성 중 오류: {str(e)}")
