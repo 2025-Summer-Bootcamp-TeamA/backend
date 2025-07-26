@@ -399,35 +399,8 @@ class VisionStoryService:
                     )
             
             # 성공 응답 처리 (모킹/실제 API 공통)
-            if result and "data" in result:
-                data = result["data"]
-                
-                # wait_for_completion이 완료된 경우 status를 created로 설정
-                if wait_for_completion and data.get("video_url"):
-                    data["status"] = "created"
-                
-                # 성공 응답 처리
-                video_info = VisionStoryVideoInfo(
-                    video_id=data.get("video_id", ""),
-                    video_url=data.get("video_url", ""),
-                    thumbnail_url=data.get("thumbnail_url", ""),
-                    status=data.get("status", "pending"),
-                    avatar_id=avatar_id,
-                    voice_id=voice_id,
-                    aspect_ratio=aspect_ratio,
-                    resolution=resolution,
-                    emotion=emotion,
-                    background_color=background_color,
-                    duration=data.get("duration", 0),
-                    cost_credit=data.get("cost_credit", 0),
-                    created_at=datetime.now(),
-                    generation_method="mock_api" if self.use_mock else "visionstory_api",
-                    success=True
-                )
-                
-                logger.info(f"VisionStory 영상 생성 성공: video_id={video_info.video_id}, status={video_info.status}")
-                return video_info
-            else:
+            # 응답 구조 검증
+            if not result or "data" not in result:
                 logger.error(f"VisionStory API 응답 구조가 올바르지 않습니다: {result}")
                 return VisionStoryVideoInfo(
                     video_id="",
@@ -447,6 +420,34 @@ class VisionStoryService:
                     success=False,
                     error_message="API 응답 구조가 올바르지 않습니다"
                 )
+            
+            data = result["data"]
+            
+            # wait_for_completion이 완료된 경우 status를 created로 설정
+            if wait_for_completion and data.get("video_url"):
+                data["status"] = "created"
+            
+            # 성공 응답 처리
+            video_info = VisionStoryVideoInfo(
+                video_id=data.get("video_id", ""),
+                video_url=data.get("video_url", ""),
+                thumbnail_url=data.get("thumbnail_url", ""),
+                status=data.get("status", "pending"),
+                avatar_id=avatar_id,
+                voice_id=voice_id,
+                aspect_ratio=aspect_ratio,
+                resolution=resolution,
+                emotion=emotion,
+                background_color=background_color,
+                duration=data.get("duration", 0),
+                cost_credit=data.get("cost_credit", 0),
+                created_at=datetime.now(),
+                generation_method="mock_api" if self.use_mock else "visionstory_api",
+                success=True
+            )
+            
+            logger.info(f"VisionStory 영상 생성 성공: video_id={video_info.video_id}, status={video_info.status}")
+            return video_info
                 
         except Exception as e:
             error_msg = f"VisionStory API 호출 중 오류: {str(e)}"
