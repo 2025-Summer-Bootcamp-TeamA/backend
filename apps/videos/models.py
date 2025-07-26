@@ -1,7 +1,9 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
 
 class Video(models.Model):
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='videos', null=True, blank=True)
     title = models.CharField(max_length=100)
     artist = models.CharField(max_length=100, default="unknown")
     place_id = models.CharField(max_length=100, default="unknown")
