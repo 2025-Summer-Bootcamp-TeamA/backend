@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "apps.videos",
     "apps.avatars",
     "apps.gcs",
+    "apps.core",
     "rest_framework",
     "apps.authentication",
     "drf_yasg",
@@ -135,3 +136,22 @@ LOGGING = {
 
 # OpenAI API 설정
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# RabbitMQ 연결 설정 (환경변수 또는 기본값)
+RABBITMQ_USER = os.getenv('RABBITMQ_DEFAULT_USER', 'guest')
+RABBITMQ_PASS = os.getenv('RABBITMQ_DEFAULT_PASS', 'guest')
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', f'amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@rabbitmq:5672//')
+
+if RABBITMQ_USER == 'guest' and RABBITMQ_PASS == 'guest':
+    print("WARNING: RabbitMQ using default guest credentials! Change for production.")
+# Redis 비밀번호가 설정되지 않은 경우 기본 연결 사용 (개발 환경용)
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD')
+if REDIS_PASSWORD:
+    CELERY_RESULT_BACKEND = f"redis://:{REDIS_PASSWORD}@redis:6379/0"
+else:
+    CELERY_RESULT_BACKEND = "redis://redis:6379/0"
+    print("WARNING: Redis running without password protection!")
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Seoul'
