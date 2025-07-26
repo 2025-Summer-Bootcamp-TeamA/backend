@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "apps.videos",
     "apps.avatars",
     "apps.gcs",
+    "apps.core",
     "rest_framework",
     "apps.authentication",
     "drf_yasg",

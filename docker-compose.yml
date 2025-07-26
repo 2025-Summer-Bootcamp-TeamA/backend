@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   web:
     build: .
@@ -9,9 +8,10 @@ services:
       - rabbitmq
       - redis
     environment:
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL:?must_be_set}
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+      - DJANGO_SETTINGS_MODULE=config.settings.dev
+      - CELERY_BROKER_URL=pyamqp://teama_user:SecurePass123!@rabbitmq:5672//
+      - RABBITMQ_DEFAULT_USER=teama_user
+      - RABBITMQ_DEFAULT_PASS=SecurePass123!
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credential/teama-service-account.json
       - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
@@ -24,7 +24,24 @@ services:
       - DB_PORT=${DB_PORT:-5432}
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-password}
-      - DB_NAME=${DB_NAME:-backend}
+      - DB_NAME=${DB_NAME:-backend} 
+    # environment:
+    #   - CELERY_BROKER_URL=${CELERY_BROKER_URL:?must_be_set}
+    #   - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+    #   - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+    #   - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    #   - GOOGLE_APPLICATION_CREDENTIALS=/app/credential/teama-service-account.json
+    #   - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
+    #   - SMITHERY_API_KEY=${SMITHERY_API_KEY:-dummy_key}
+    #   - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY:-dummy_key}
+    #   - OPENAI_API_KEY=${OPENAI_API_KEY:-dummy_key}
+    #   - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-default-key}
+    #   - DB_TYPE=${DB_TYPE:-sqlite}
+    #   - DB_HOST=${DB_HOST:-localhost}
+    #   - DB_PORT=${DB_PORT:-5432}
+    #   - DB_USER=${DB_USER:-postgres}
+    #   - DB_PASSWORD=${DB_PASSWORD:-password}
+    #   - DB_NAME=${DB_NAME:-backend}
     volumes:
       - ./credential:/app/credential
 
@@ -36,9 +53,10 @@ services:
       - rabbitmq
       - redis
     environment:
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL:?must_be_set}
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+      - DJANGO_SETTINGS_MODULE=config.settings.dev
+      - CELERY_BROKER_URL=pyamqp://teama_user:SecurePass123!@rabbitmq:5672//
+      - RABBITMQ_DEFAULT_USER=teama_user
+      - RABBITMQ_DEFAULT_PASS=SecurePass123!
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credential/teama-service-account.json
       - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
@@ -62,8 +80,8 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+      - RABBITMQ_DEFAULT_USER=teama_user
+      - RABBITMQ_DEFAULT_PASS=SecurePass123!
 
   redis:
     image: redis:7
