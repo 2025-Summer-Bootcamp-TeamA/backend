@@ -139,8 +139,8 @@ class VisionStoryVideoStatusView(APIView):
                                 'video_url': openapi.Schema(type=openapi.TYPE_STRING, description='영상 URL'),
                                 'status': openapi.Schema(type=openapi.TYPE_STRING, description='영상 상태'),
                                 'created_at': openapi.Schema(type=openapi.TYPE_STRING, description='생성 시간'),
-                                'duration': openapi.Schema(type=openapi.TYPE_INTEGER, description='영상 길이(초)'),
-                                'thumbnail_url': openapi.Schema(type=openapi.TYPE_STRING, description='썸네일 URL'),
+                                # 'duration': openapi.Schema(type=openapi.TYPE_INTEGER, description='영상 길이(초)'),
+                                # 'thumbnail_url': openapi.Schema(type=openapi.TYPE_STRING, description='썸네일 URL'),
                             }
                         ),
                     }
@@ -184,16 +184,14 @@ class VisionStoryVideoStatusView(APIView):
                     "error": "영상을 찾을 수 없습니다."
                 }, status=status.HTTP_404_NOT_FOUND)
             
-            # 성공 응답
+            # 성공 응답 (썸네일 URL 제외)
             response_data = {
                 "success": True,
                 "data": {
                     "video_id": status_info.get("video_id", video_id),
                     "video_url": status_info.get("video_url", ""),
                     "status": status_info.get("status", "unknown"),
-                    "created_at": status_info.get("created_at", ""),
-                    "duration": status_info.get("duration", 0),
-                    "thumbnail_url": status_info.get("thumbnail_url", "")
+                    "created_at": status_info.get("created_at", "")
                 }
             }
             

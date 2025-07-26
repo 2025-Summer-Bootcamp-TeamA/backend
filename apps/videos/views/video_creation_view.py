@@ -117,9 +117,7 @@ class VideoCreationView(APIView):
             # 4단계: 응답 데이터 구성
             response_data = {
                 'videoId': video_info.video_id,  # 영상 ID 추가
-                'visionstoryUrl': video_info.video_url,  # 아직 비어있을 수 있음
                 'thumbnailUrl': video_info.thumbnail_url,
-                'duration': video_info.duration,
                 'status': video_info.status,  # 상태 정보 추가
                 'artworkInfo': {
                     'title': artwork_info.basic_info.title if artwork_info.basic_info and artwork_info.basic_info.title else '',
