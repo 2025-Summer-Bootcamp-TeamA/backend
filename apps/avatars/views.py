@@ -258,25 +258,30 @@ class AvatarListView(APIView):
                 "retry_required": True
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # GCS 서비스를 사용하여 이미지 업로드
-        file_url = upload_file_to_gcs(image_file, folder="avatars")
-        if not file_url:
-            return Response({
-                "success": False, 
-                "error": "이미지 업로드 실패", 
-                "message": "이미지를 업로드할 수 없습니다.",
-                "retry_required": True
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        print("원본 이미지 GCS URL:", file_url)
-
         # 모킹 모드 확인
         use_mock = os.getenv("VISIONSTORY_USE_MOCK", "false").lower() == "true"
         
         if use_mock:
-            # 모의 아바타 생성 성공 응답
+            # 모킹 모드에서는 임시로 파일을 메모리에 저장하여 VisionStory API 호출
+            import tempfile
+            
+            # 임시 파일 생성
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+                for chunk in image_file.chunks():
+                    temp_file.write(chunk)
+                temp_file_path = temp_file.name
+            
+            # 임시 파일을 VisionStory API에 전달 (실제로는 모킹이므로 호출하지 않음)
             logger.info("🚫 모킹 모드 활성화 - 모의 아바타 데이터 반환")
             import time
             mock_avatar_id = f"mock_avatar_{int(time.time())}"
+            
+            # 모킹 모드에서도 성공 후 GCS에 저장
+            file_url = upload_file_to_gcs(image_file, folder="avatars")
+            
+            # 임시 파일 삭제
+            os.unlink(temp_file_path)
+            
             return Response({
                 "success": True,
                 "avatar_id": mock_avatar_id,
@@ -285,23 +290,85 @@ class AvatarListView(APIView):
                 "message": "모의 아바타 생성 성공 (모킹 모드)"
             }, status=status.HTTP_200_OK)
         
-        # 실제 VisionStory API 호출
-        response = _call_visionstory_api(file_url)
-        if not response:
-            return Response({
-                "success": False,
-                "error": "VisionStory API 호출 실패",
-                "message": "VisionStory API 호출에 실패했습니다.",
-                "retry_required": True
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        if response.status_code == 200:
-            result = response.json()
-            return Response({
-                "success": True,
-                "avatar_id": result.get("data", {}).get("avatar_id"),
-                "thumbnail_url": result.get("data", {}).get("thumbnail_url"),
-                "uploaded_url": file_url,
-                "message": result.get("message", "아바타 생성 성공")
-            }, status=status.HTTP_200_OK)
+        # 실제 VisionStory API 호출을 위해 임시로 파일을 메모리에 저장
+        import tempfile
         
-        # VisionStory 실패 시 대체 생성 로직은 여기서 계속...
+        # 임시 파일 생성
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+            for chunk in image_file.chunks():
+                temp_file.write(chunk)
+            temp_file_path = temp_file.name
+        
+        try:
+            # 임시 파일을 VisionStory API에 전달 (실제로는 URL이 필요하므로 임시 업로드)
+            # 실제 구현에서는 임시 스토리지나 직접 파일 업로드 방식을 사용해야 함
+            # 여기서는 간단히 임시 GCS 업로드 후 VisionStory API 호출
+            
+            # 임시 GCS 업로드 (VisionStory API 호출용)
+            temp_file_url = upload_file_to_gcs(image_file, folder="temp_avatars")
+            if not temp_file_url:
+                return Response({
+                    "success": False,
+                    "error": "임시 이미지 업로드 실패",
+                    "message": "이미지를 임시 업로드할 수 없습니다.",
+                    "retry_required": True
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # VisionStory API 호출
+            response = _call_visionstory_api(temp_file_url)
+            if not response:
+                return Response({
+                    "success": False,
+                    "error": "VisionStory API 호출 실패",
+                    "message": "VisionStory API 호출에 실패했습니다.",
+                    "retry_required": True
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            if response.status_code == 200:
+                result = response.json()
+                avatar_id = result.get("data", {}).get("avatar_id")
+                
+                if avatar_id:
+                    # VisionStory API 성공 후 영구 GCS 저장
+                    logger.info(f"VisionStory 아바타 생성 성공: {avatar_id}, 영구 GCS 저장 시작")
+                    
+                    # 영구 저장을 위해 다시 GCS에 업로드
+                    file_url = upload_file_to_gcs(image_file, folder="avatars")
+                    if not file_url:
+                        logger.warning("영구 GCS 저장 실패, 임시 URL 사용")
+                        file_url = temp_file_url
+                    
+                    return Response({
+                        "success": True,
+                        "avatar_id": avatar_id,
+                        "thumbnail_url": result.get("data", {}).get("thumbnail_url"),
+                        "uploaded_url": file_url,
+                        "message": result.get("message", "아바타 생성 성공")
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        "success": False,
+                        "error": "아바타 생성 실패",
+                        "message": "VisionStory에서 아바타 ID를 받지 못했습니다.",
+                        "retry_required": True
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                # VisionStory API 실패
+                error_message = "VisionStory 아바타 생성에 실패했습니다."
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get("message", error_message)
+                except:
+                    pass
+                
+                return Response({
+                    "success": False,
+                    "error": "VisionStory API 오류",
+                    "message": error_message,
+                    "retry_required": True
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        finally:
+            # 임시 파일 삭제
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
