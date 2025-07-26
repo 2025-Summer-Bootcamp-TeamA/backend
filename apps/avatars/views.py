@@ -13,6 +13,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from django.core.files.storage import default_storage
 import logging
+import json
 
 # GCS 업로드 서비스 import
 from apps.gcs.storage_service import upload_image_to_gcs, upload_file_to_gcs, move_gcs_file
@@ -358,7 +359,8 @@ class AvatarListView(APIView):
                 try:
                     error_data = response.json()
                     error_message = error_data.get("message", error_message)
-                except:
+                except (json.JSONDecodeError, KeyError) as e:
+                    logger.warning(f"응답 파싱 실패: {e}")
                     pass
                 
                 return Response({
