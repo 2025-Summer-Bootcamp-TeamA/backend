@@ -38,6 +38,22 @@ class VisionStoryService:
             Dict: 영상 상태 정보 또는 None (실패 시)
         """
         try:
+            # 모킹 모드 확인
+            if self.use_mock:
+                logger.info(f"🚫 모킹 모드 활성화 - 모의 영상 상태 반환: video_id={video_id}")
+                # 모킹 모드에서는 즉시 완성된 상태로 반환
+                mock_status_data = {
+                    "video_id": video_id,
+                    "video_url": f"https://mock.visionstory.ai/videos/{video_id}.mp4",
+                    "thumbnail_url": f"https://mock.visionstory.ai/thumbnails/{video_id}.jpg",
+                    "status": "created",
+                    "duration": 180,
+                    "cost_credit": 10,
+                    "created_at": datetime.now().isoformat()
+                }
+                logger.info(f"모의 영상 상태 조회 성공: video_id={video_id}, status=created")
+                return mock_status_data
+            
             headers = {
                 "X-API-Key": self.api_key,
                 "Content-Type": "application/json"
@@ -85,6 +101,20 @@ class VisionStoryService:
             Dict: 완성된 영상 정보 또는 None (실패 시)
         """
         logger.info(f"영상 생성 완료 대기 시작: video_id={video_id}, max_wait_time={max_wait_time}초")
+        
+        # 모킹 모드에서는 즉시 완성된 상태 반환
+        if self.use_mock:
+            logger.info(f"🚫 모킹 모드 활성화 - 즉시 완성된 영상 상태 반환: video_id={video_id}")
+            mock_completed_data = {
+                "video_id": video_id,
+                "video_url": f"https://mock.visionstory.ai/videos/{video_id}.mp4",
+                "thumbnail_url": f"https://mock.visionstory.ai/thumbnails/{video_id}.jpg",
+                "status": "created",
+                "duration": 180,
+                "cost_credit": 10,
+                "created_at": datetime.now().isoformat()
+            }
+            return mock_completed_data
         
         start_time = time.time()
         
@@ -282,6 +312,19 @@ class VisionStoryService:
                     "server_time": datetime.now().isoformat()
                 }
                 result = mock_response_data
+                
+                # 모킹 모드에서도 wait_for_completion 처리
+                if wait_for_completion and "data" in result and "video_id" in result["data"]:
+                    video_id = result["data"]["video_id"]
+                    logger.info(f"모킹 모드: 영상 생성 완료 대기 시작: {video_id}")
+                    
+                    completed_info = self.wait_for_video_completion(video_id)
+                    if completed_info:
+                        # 완성된 정보로 업데이트
+                        result["data"].update(completed_info)
+                        logger.info("모킹 모드: 영상 생성 완료 대기 성공")
+                    else:
+                        logger.warning("모킹 모드: 영상 생성 완료 대기 실패, 초기 정보 사용")
             else:
                 # 실제 VisionStory API 호출
                 response = requests.post(
@@ -358,6 +401,10 @@ class VisionStoryService:
             # 성공 응답 처리 (모킹/실제 API 공통)
             if result and "data" in result:
                 data = result["data"]
+                
+                # wait_for_completion이 완료된 경우 status를 created로 설정
+                if wait_for_completion and data.get("video_url"):
+                    data["status"] = "created"
                 
                 # 성공 응답 처리
                 video_info = VisionStoryVideoInfo(

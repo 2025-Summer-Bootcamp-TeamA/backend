@@ -51,10 +51,10 @@ class VideoCreationView(APIView):
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'visionstoryUrl': openapi.Schema(type=openapi.TYPE_STRING, description='VisionStory 영상 URL', example='https://visionstory.ai/videos/video_001.mp4'),
-                        'thumbnailUrl': openapi.Schema(type=openapi.TYPE_STRING, description='썸네일 URL', example='https://example.com/thumbnails/video_001.jpg'),
-                        'duration': openapi.Schema(type=openapi.TYPE_INTEGER, description='영상 길이(초)', example=180),
-                        'artworkInfo': openapi.Schema(type=openapi.TYPE_OBJECT, description='추출된 작품 정보 (title, artist, description, videoScript 포함)'),
+                        'videoId': openapi.Schema(type=openapi.TYPE_STRING, description='영상 ID'),
+                        'videoUrl': openapi.Schema(type=openapi.TYPE_STRING, description='영상 URL (GCS)'),
+                        'status': openapi.Schema(type=openapi.TYPE_STRING, description='영상 상태'),
+                        'artworkInfo': openapi.Schema(type=openapi.TYPE_OBJECT, description='추출된 작품 정보'),
                     }
                 )
             ),
@@ -139,9 +139,9 @@ class VideoCreationView(APIView):
             
             # 4단계: 응답 데이터 구성
             response_data = {
-                'videoId': video_info.video_id,  # 영상 ID 추가
+                'videoId': video_info.video_id,  # 영상 ID
                 'videoUrl': gcs_video_url,  # GCS URL
-                'status': video_info.status,  # 상태 정보 추가
+                'status': video_info.status,  # 상태 정보
                 'artworkInfo': {
                     'title': artwork_info.basic_info.title if artwork_info.basic_info and artwork_info.basic_info.title else '',
                     'artist': artwork_info.basic_info.artist if artwork_info.basic_info and artwork_info.basic_info.artist else '',
@@ -151,7 +151,7 @@ class VideoCreationView(APIView):
             }
             
             logger.info(f"영상 생성 및 GCS 업로드 완료: video_id={video_info.video_id}")
-            return Response(response_data, status=status.HTTP_201_CREATED)  # 201 Created로 변경
+            return Response(response_data, status=status.HTTP_201_CREATED)  # 201 Created
                 
         except Exception as e:
             logger.error(f"영상 생성 중 오류: {str(e)}")
