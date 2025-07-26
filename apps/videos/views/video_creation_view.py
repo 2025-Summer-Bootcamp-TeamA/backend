@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny
 from apps.core.services import ArtworkInfoOrchestrator
 from apps.videos.services import VideoGenerator
 from apps.videos.services.visionstory_service import VisionStoryService
+from apps.gcs.storage_service import upload_video_to_gcs
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import logging
@@ -50,10 +51,10 @@ class VideoCreationView(APIView):
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'visionstoryUrl': openapi.Schema(type=openapi.TYPE_STRING, description='VisionStory 영상 URL', example='https://visionstory.ai/videos/video_001.mp4'),
-                        'thumbnailUrl': openapi.Schema(type=openapi.TYPE_STRING, description='썸네일 URL', example='https://example.com/thumbnails/video_001.jpg'),
-                        'duration': openapi.Schema(type=openapi.TYPE_INTEGER, description='영상 길이(초)', example=180),
-                        'artworkInfo': openapi.Schema(type=openapi.TYPE_OBJECT, description='추출된 작품 정보 (title, artist, description, videoScript 포함)'),
+                        'videoId': openapi.Schema(type=openapi.TYPE_STRING, description='영상 ID'),
+                        'videoUrl': openapi.Schema(type=openapi.TYPE_STRING, description='영상 URL (GCS)'),
+                        'status': openapi.Schema(type=openapi.TYPE_STRING, description='영상 상태'),
+                        'artworkInfo': openapi.Schema(type=openapi.TYPE_OBJECT, description='추출된 작품 정보'),
                     }
                 )
             ),
@@ -101,7 +102,7 @@ class VideoCreationView(APIView):
                 museum_name=museum_name
             ))
             
-            # 3단계: VisionStory 영상 생성
+            # 3단계: VisionStory 영상 생성 (완성될 때까지 대기)
             logger.info("VisionStory 영상 생성 시작")
             video_info = self.video_generator.generate_video(
                 artwork_info=artwork_info,
@@ -110,14 +111,37 @@ class VideoCreationView(APIView):
                 aspect_ratio=aspect_ratio,
                 resolution=resolution,
                 emotion=emotion,
-                background_color=background_color
+                background_color=background_color,
+                wait_for_completion=True  # 영상이 완성될 때까지 대기
             )
+            
+            # VisionStory URL을 GCS에 업로드 (영상이 완성된 경우에만)
+            visionstory_video_url = video_info.video_url
+            gcs_video_url = None
+            
+            if visionstory_video_url and video_info.status == "created":
+                logger.info(f"VisionStory 영상을 GCS에 업로드 시작: {visionstory_video_url}")
+                gcs_video_url = upload_video_to_gcs(visionstory_video_url, folder="videos")
+                
+                if gcs_video_url:
+                    logger.info(f"GCS 업로드 성공: {gcs_video_url}")
+                else:
+                    logger.warning("GCS 업로드 실패, VisionStory URL 사용")
+                    gcs_video_url = visionstory_video_url
+            else:
+                # 영상 생성 실패 또는 URL이 없는 경우
+                logger.error(f"영상 생성 실패: status={video_info.status}, url={visionstory_video_url}")
+                return Response({
+                    'error': '영상 생성에 실패했습니다.',
+                    'status': video_info.status,
+                    'error_message': video_info.error_message
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
             # 4단계: 응답 데이터 구성
             response_data = {
-                'visionstoryUrl': video_info.video_url,
-                'thumbnailUrl': video_info.thumbnail_url,
-                'duration': video_info.duration,
+                'videoId': video_info.video_id,  # 영상 ID
+                'videoUrl': gcs_video_url,  # GCS URL
+                'status': video_info.status,  # 상태 정보
                 'artworkInfo': {
                     'title': artwork_info.basic_info.title if artwork_info.basic_info and artwork_info.basic_info.title else '',
                     'artist': artwork_info.basic_info.artist if artwork_info.basic_info and artwork_info.basic_info.artist else '',
@@ -126,8 +150,8 @@ class VideoCreationView(APIView):
                 }
             }
             
-            logger.info("영상 생성 완료")
-            return Response(response_data, status=status.HTTP_201_CREATED)
+            logger.info(f"영상 생성 및 GCS 업로드 완료: video_id={video_info.video_id}")
+            return Response(response_data, status=status.HTTP_201_CREATED)  # 201 Created
                 
         except Exception as e:
             logger.error(f"영상 생성 중 오류: {str(e)}")
