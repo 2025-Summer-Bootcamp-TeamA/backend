@@ -27,7 +27,8 @@ class VisionStoryVideoGenerator:
                       aspect_ratio: str = "9:16",
                       resolution: str = "480p",
                       emotion: str = "cheerful",
-                      background_color: str = "") -> VisionStoryVideoInfo:
+                      background_color: str = "",
+                      wait_for_completion: bool = True) -> VisionStoryVideoInfo:
         """
         작품 정보를 바탕으로 VisionStory AI 영상을 생성합니다.
         
@@ -39,6 +40,7 @@ class VisionStoryVideoGenerator:
             resolution: 해상도
             emotion: 감정 설정
             background_color: 배경색
+            wait_for_completion: 영상 생성 완료까지 대기할지 여부
             
         Returns:
             VisionStoryVideoInfo: 생성된 영상 정보
@@ -57,7 +59,8 @@ class VisionStoryVideoGenerator:
                 aspect_ratio=aspect_ratio,
                 resolution=resolution,
                 emotion=emotion,
-                background_color=background_color
+                background_color=background_color,
+                wait_for_completion=wait_for_completion
             )
             
             logger.info("=== VisionStory 영상 생성 완료 ===")
