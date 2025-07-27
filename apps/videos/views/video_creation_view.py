@@ -51,7 +51,7 @@ class VideoCreationView(APIView):
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'videoId': openapi.Schema(type=openapi.TYPE_STRING, description='영상 ID'),
+                        'visionstoryId': openapi.Schema(type=openapi.TYPE_STRING, description='영상 ID'),
                         'videoUrl': openapi.Schema(type=openapi.TYPE_STRING, description='영상 URL (GCS)'),
                         'status': openapi.Schema(type=openapi.TYPE_STRING, description='영상 상태'),
                         'artworkInfo': openapi.Schema(type=openapi.TYPE_OBJECT, description='추출된 작품 정보'),
@@ -139,7 +139,7 @@ class VideoCreationView(APIView):
             
             # 4단계: 응답 데이터 구성
             response_data = {
-                'videoId': video_info.video_id,  # 영상 ID
+                'visionstoryId': video_info.video_id,  # 영상 ID
                 'videoUrl': gcs_video_url,  # GCS URL
                 'status': video_info.status,  # 상태 정보
                 'artworkInfo': {
