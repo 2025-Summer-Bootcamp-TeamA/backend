@@ -2,7 +2,7 @@ import asyncio
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from apps.core.services import ArtworkInfoOrchestrator
 from apps.videos.services import VideoGenerator
 from apps.videos.services.visionstory_service import VisionStoryService
@@ -10,6 +10,7 @@ from apps.gcs.storage_service import upload_video_to_gcs
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import logging
+from apps.videos.models import Video
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ class VideoCreationView(APIView):
     
     OCR 텍스트를 입력받아 자동으로 영상을 생성하는 기능
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -159,3 +160,44 @@ class VideoCreationView(APIView):
                 {'error': f'영상 생성 중 오류가 발생했습니다: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             ) 
+
+    @swagger_auto_schema(
+        tags=["videos"],
+        operation_summary="영상 목록 조회",
+        operation_description="JWT 토큰 기반으로 사용자의 영상 목록을 조회합니다.",
+        security=[{'Bearer': []}],
+        responses={200: openapi.Response(
+            description="영상 목록",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "videos": openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "id": openapi.Schema(type=openapi.TYPE_INTEGER, example=1),
+                                "placeId": openapi.Schema(type=openapi.TYPE_STRING, example="ChIJMwd0tBdzfDURdfxQfHwh4XQ"),
+                                "title": openapi.Schema(type=openapi.TYPE_STRING, example="경복궁 근정전 VR 체험"),
+                                "thumbnailUrl": openapi.Schema(type=openapi.TYPE_STRING, example="https://example.com/thumbnails/video_001.jpg"),
+                                "createdAt": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", example="2025-07-08T14:30:00Z"),
+                            }
+                        )
+                    )
+                }
+            )
+        )}
+    )
+    def get(self, request):
+        """영상 목록 조회"""
+        videos = Video.objects.filter(user=request.user).order_by('-created_at')
+        results = [
+            {
+                "id": v.id,
+                "placeId": v.place_id,
+                "title": v.title,
+                "thumbnailUrl": v.thumbnail_url,
+                "createdAt": v.created_at,
+            } for v in videos
+        ]
+        return Response({"videos": results}) 

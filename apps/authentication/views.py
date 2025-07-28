@@ -68,19 +68,3 @@ class GoogleLoginView(APIView):
             "accessToken": access_token,
             "refreshToken": refresh_token
         })
-
-class TestAuthView(APIView):
-    """
-    JWT 인증 테스트용 뷰
-    """
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [CustomJWTAuthentication]
-    
-    def get(self, request):
-        return Response({
-            "message": "인증 성공!",
-            "user_id": request.user.id,
-            "username": request.user.username,
-            "email": request.user.email,
-            "authenticated": request.user.is_authenticated
-        })
