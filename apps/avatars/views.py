@@ -27,43 +27,61 @@ VISIONSTORY_API_KEY = os.getenv("VISIONSTORY_API_KEY")
 VISIONSTORY_GENERATE_URL = "https://openapi.visionstory.ai/api/v1/avatar"
 
 def _call_visionstory_api(image_url):
+    # API 키 확인
+    if not VISIONSTORY_API_KEY:
+        logger.error("VISIONSTORY_API_KEY가 설정되지 않았습니다.")
+        return None
+    
+    # API 키 일부만 로깅 (보안상)
+    api_key_preview = VISIONSTORY_API_KEY[:8] + "..." if len(VISIONSTORY_API_KEY) > 8 else "None"
+    logger.info(f"VisionStory API 키 확인: {api_key_preview}")
+    
     headers = {
         "X-API-Key": VISIONSTORY_API_KEY,
         "Content-Type": "application/json"
     }
     payload = {"img_url": image_url}
+    
+    logger.info(f"VisionStory API 호출 시작: {image_url}")
+    logger.info(f"API URL: {VISIONSTORY_GENERATE_URL}")
+    logger.info(f"요청 헤더: {{k: v if k != 'X-API-Key' else '***' for k, v in headers.items()}}")
+    logger.info(f"요청 페이로드: {payload}")
+    
     try:
         response = requests.post(
             VISIONSTORY_GENERATE_URL,
             json=payload,
             headers=headers,
-            timeout=15
+            timeout=30  # timeout 증가
         )
-        print(f"VisionStory 응답({image_url}):", response.status_code, response.text)
+        logger.info(f"VisionStory 응답({image_url}): {response.status_code}")
+        logger.info(f"VisionStory 응답 내용: {response.text}")
         return response
+    except requests.exceptions.Timeout:
+        logger.error(f"VisionStory API 호출 타임아웃: {image_url}")
+        return None
+    except requests.exceptions.RequestException as e:
+        logger.error(f"VisionStory API 호출 네트워크 에러: {e}")
+        return None
     except Exception as e:
-        print(f"VisionStory API 호출 에러: {e}")
+        logger.error(f"VisionStory API 호출 예상치 못한 에러: {e}")
         return None
 
 def _generate_prompt(image_url):
     # OpenAI 클라이언트 초기화 (최신 방식)
     client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
     prompt = (
-        "한국어로 대답해줘. 이 이미지를 바탕으로 다음 항목에 대해 매우 구체적으로 설명해줘:\n\n"
-        "- 주요 인물 또는 중심 객체는 무엇이며, 외형적 특징은 어떤가요?\n"
-        "- 배경은 어떤 장소이며, 그 분위기와 색감은 어떤가요?\n"
-        "- 전체적인 스타일은 현실적인가요, 예술적인가요, 고전적인가요?\n"
-        "- 조명, 그림자, 구도는 어떤 느낌인가요?\n\n"
-        "⚠️ 주의: 이 설명은 'VisionStory'라는 AI 영상 생성 시스템에서 인식 가능한 **아바타 이미지 생성**에 사용됩니다.\n"
-        "따라서 반드시 아래 조건을 충족하도록 묘사해줘:\n"
-        "- 사람의 얼굴이 정면을 바라보고 있어야 함\n"
-        "- 상반신이 명확히 드러나야 함 (허리 위 중심)\n"
-        "- 배경은 흐릿하거나 단색 등으로 단순하게 표현되어야 함\n"
-        "- 전체적으로 뚜렷하고 선명한 이미지여야 함\n\n"
-        "이 모든 요소를 하나의 자연스러운 문단으로 통합해서 작성해줘. "
-        "너무 예술적인 표현보다는, 구체적이고 사실적인 묘사로 구성해줘. "
-        "결과는 DALL·E 3 이미지 생성 프롬프트로 바로 사용할 예정이야."
-    )
+        "사용자가 업로드한 이미지를 기반으로, 이미지의 주요 시각적 요소를 요약해 주세요.\n"
+        "특히 다음 항목들을 중심으로 구체적으로 설명해 주세요:\n"
+        "- 이미지에 작품 윤곽을 정확하게 알려주세요\n"
+        "- 이미지의 전체적인 형태나 구조 (예: 원형, 인체, 동물, 조형물 등)\n"
+        "- 이미지의 색감이나 분위기 (예: 고대, 현대, 만화 스타일, 사실적 등)\n"
+        "- 이미지에 작품의 색깔을 정확하게 알려주세요\n"
+        "- 표면 질감이나 재질 (예: 금속, 석재, 유화 느낌 등)\n"
+        "- 눈, 코, 입과 같이 사람처럼 보일 수 있는 요소가 존재하는지 여부\n"
+        "- 이미지의 중심이 되는 대상과 배경의 구성\n"
+        "설명은 최대한 객관적으로, DALL·E가 아바타용 이미지를 생성하는 데 활용할 수 있도록 해 주세요."
+)
     try:
         gpt_response = client.chat.completions.create(
             model="gpt-4o",
@@ -79,27 +97,43 @@ def _generate_prompt(image_url):
             max_tokens=500
         )
         result = gpt_response.choices[0].message.content if gpt_response.choices and gpt_response.choices[0].message.content else None
-        print("GPT-4o 프롬프트 결과:", result)
+        logger.info(f"GPT-4o 프롬프트 결과: {result}")
         return result
     except Exception as e:
-        print(f"프롬프트 생성 에러: {e}")
+        logger.error(f"프롬프트 생성 에러: {e}")
         return None
 
 def _generate_dalle_image(prompt_text):
     # OpenAI 클라이언트 초기화 (최신 방식)  
     client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+    
+    # 안전하고 명확한 기본 프롬프트
+    safe_prompt = (
+        "업로드한 이미지를 기반으로 원본의 형태, 구조, 질감을 최대한 그대로 유지해 주세요.\n"
+            "새로운 사람을 생성하지 말고, 기존 이미지 위에 눈, 코, 입을 자연스럽게 삽입하거나 선명하게 보완해 주세요.\n"
+            "AI가 얼굴로 인식할 수 있도록 눈, 코, 입은 명확하게 표현하고, 어깨 라인을 약간 추가해도 괜찮습니다.\n"
+            "결과물이 애니메이션 스타일이더라도 괜찮지만, 반드시 원본 이미지의 구조와 분위기를 유지해야 합니다."
+            "눈은 반드시 2개있어야하고 코는 1개있어야하고 입은 1개있어야합니다."
+            "어깨 라인은 반드시 있어야합니다."
+            "반드시 정면을 바라봐야합니다"
+            "사물인경우 그냥 이미지설명을 바탕으로 작품모양과 색깔을 유지한 얼굴을 만들어주세요"
+    )
+    
+    # 사용자 프롬프트가 있으면 결합, 없으면 기본 프롬프트 사용
+    final_prompt = f"{prompt_text} {safe_prompt}" if prompt_text else safe_prompt
+    
     try:
         dalle_response = client.images.generate(
             model="dall-e-3",
-            prompt=prompt_text,
+            prompt=final_prompt,
             n=1,
             size="1024x1024"
         )
         url = dalle_response.data[0].url if dalle_response.data and dalle_response.data[0].url else None
-        print("DALL·E 3 이미지 URL:", url)
+        logger.info(f"DALL·E 3 이미지 URL: {url}")
         return url
     except Exception as e:
-        print(f"DALL·E 3 이미지 생성 에러: {e}")
+        logger.error(f"DALL·E 3 이미지 생성 에러: {e}")
         return None
 
 # GCS 업로드 함수는 apps.gcs.storage_service로 이동됨
@@ -108,10 +142,10 @@ def _upload_image_to_gcs(image_url):
     """DALL·E 이미지 URL을 GCS에 업로드 (기존 호환성)"""
     result = upload_image_to_gcs(image_url, folder="avatars")
     if result:
-        print("GCS 업로드된 DALL·E 3 이미지 URL:", result)
+        logger.info(f"GCS 업로드된 DALL·E 3 이미지 URL: {result}")
         return result
     else:
-        print("GCS 업로드 에러: 업로드 실패")
+        logger.error("GCS 업로드 에러: 업로드 실패")
         return None
 
 
@@ -218,6 +252,7 @@ class AvatarListView(APIView):
                         'thumbnail_url': openapi.Schema(type=openapi.TYPE_STRING, description='아바타 썸네일 URL'),
                         'uploaded_url': openapi.Schema(type=openapi.TYPE_STRING, description='업로드된 원본 이미지 URL'),
                         'message': openapi.Schema(type=openapi.TYPE_STRING, description='성공 메시지'),
+                        'used_dalle': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='DALL-E 3 사용 여부', example=False),
                     }
                 )
             ),
@@ -259,7 +294,7 @@ class AvatarListView(APIView):
                 "retry_required": True
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # 모킹 모드 확인
+        # 모킹 모드 확인 (기본값을 false로 변경)
         use_mock = os.getenv("VISIONSTORY_USE_MOCK", "false").lower() == "true"
         
         if use_mock:
@@ -288,7 +323,8 @@ class AvatarListView(APIView):
                 "avatar_id": mock_avatar_id,
                 "thumbnail_url": "https://mock.visionstory.ai/thumbnails/mock_avatar.jpg",
                 "uploaded_url": file_url,
-                "message": "모의 아바타 생성 성공 (모킹 모드)"
+                "message": "모의 아바타 생성 성공 (모킹 모드)",
+                "used_dalle": False  # 모킹 모드에서는 DALL-E 3 사용 안함
             }, status=status.HTTP_200_OK)
         
         # 실제 VisionStory API 호출을 위해 임시로 파일을 메모리에 저장
@@ -316,15 +352,20 @@ class AvatarListView(APIView):
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
             # VisionStory API 호출
+            logger.info(f"VisionStory API 호출 시작: temp_file_url={temp_file_url}")
             response = _call_visionstory_api(temp_file_url)
-            if not response:
+            logger.info(f"_call_visionstory_api 반환값: {response}")
+            logger.info(f"response 타입: {type(response)}")
+            if response is None:
+                logger.error("VisionStory API 호출 실패: response가 None")
                 return Response({
                     "success": False,
                     "error": "VisionStory API 호출 실패",
-                    "message": "VisionStory API 호출에 실패했습니다.",
+                    "message": "VisionStory API 호출에 실패했습니다. API 키 설정을 확인해주세요.",
                     "retry_required": True
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
+            logger.info(f"VisionStory API 응답 상태코드: {response.status_code}")
             if response.status_code == 200:
                 result = response.json()
                 avatar_id = result.get("data", {}).get("avatar_id")
@@ -344,7 +385,8 @@ class AvatarListView(APIView):
                         "avatar_id": avatar_id,
                         "thumbnail_url": result.get("data", {}).get("thumbnail_url"),
                         "uploaded_url": file_url,
-                        "message": result.get("message", "아바타 생성 성공")
+                        "message": result.get("message", "아바타 생성 성공"),
+                        "used_dalle": False  # 원본 이미지로 성공
                     }, status=status.HTTP_200_OK)
                 else:
                     return Response({
@@ -354,21 +396,91 @@ class AvatarListView(APIView):
                         "retry_required": True
                     }, status=status.HTTP_400_BAD_REQUEST)
             else:
-                # VisionStory API 실패
-                error_message = "VisionStory 아바타 생성에 실패했습니다."
-                try:
-                    error_data = response.json()
-                    error_message = error_data.get("message", error_message)
-                except (json.JSONDecodeError, KeyError) as e:
-                    logger.warning(f"응답 파싱 실패: {e}")
-                    pass
+                # VisionStory API 실패 - DALL-E 3로 새 이미지 생성 시도
+                logger.info(f"VisionStory 아바타 생성 실패 (상태코드: {response.status_code}), DALL-E 3로 새 이미지 생성 시도")
+                logger.info(f"VisionStory 실패 응답: {response.text}")
                 
-                return Response({
-                    "success": False,
-                    "error": "VisionStory API 오류",
-                    "message": error_message,
-                    "retry_required": True
-                }, status=status.HTTP_400_BAD_REQUEST)
+                # 원본 이미지로 프롬프트 생성
+                logger.info("GPT-4o로 프롬프트 생성 시작")
+                prompt = _generate_prompt(temp_file_url)
+                if not prompt:
+                    logger.error("GPT-4o 프롬프트 생성 실패")
+                    return Response({
+                        "success": False,
+                        "error": "프롬프트 생성 실패",
+                        "message": "이미지 분석에 실패했습니다. 다른 이미지를 시도해주세요.",
+                        "retry_required": True
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # DALL-E 3로 새 이미지 생성
+                logger.info("DALL-E 3 이미지 생성 시작")
+                logger.info(f"생성할 프롬프트: {prompt}")
+                dalle_image_url = _generate_dalle_image(prompt)
+                if not dalle_image_url:
+                    logger.error("DALL-E 3 이미지 생성 실패")
+                    return Response({
+                        "success": False,
+                        "error": "DALL-E 3 이미지 생성 실패",
+                        "message": "새 이미지 생성에 실패했습니다. 다른 이미지를 시도해주세요.",
+                        "retry_required": True
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # 생성된 이미지를 GCS에 업로드
+                logger.info(f"DALL-E 3 생성 이미지 GCS 업로드 시작: {dalle_image_url}")
+                dalle_gcs_url = _upload_image_to_gcs(dalle_image_url)
+                if not dalle_gcs_url:
+                    logger.error("DALL-E 3 생성 이미지 GCS 업로드 실패")
+                    return Response({
+                        "success": False,
+                        "error": "DALL-E 3 이미지 업로드 실패",
+                        "message": "생성된 이미지 업로드에 실패했습니다.",
+                        "retry_required": True
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+                # DALL-E 3로 생성된 이미지로 VisionStory 다시 시도
+                logger.info("DALL-E 3 생성 이미지로 VisionStory 재시도")
+                retry_response = _call_visionstory_api(dalle_gcs_url)
+                
+                if retry_response and retry_response.status_code == 200:
+                    # 재시도 성공
+                    result = retry_response.json()
+                    avatar_id = result.get("data", {}).get("avatar_id")
+                    
+                    if avatar_id:
+                        logger.info(f"DALL-E 3 이미지로 VisionStory 아바타 생성 성공: {avatar_id}")
+                        
+                        return Response({
+                            "success": True,
+                            "avatar_id": avatar_id,
+                            "thumbnail_url": result.get("data", {}).get("thumbnail_url"),
+                            "uploaded_url": dalle_gcs_url,
+                            "message": "DALL-E 3로 생성된 이미지로 아바타 생성 성공",
+                            "used_dalle": True  # DALL-E 3 사용 여부 표시
+                        }, status=status.HTTP_200_OK)
+                    else:
+                        return Response({
+                            "success": False,
+                            "error": "DALL-E 3 이미지 아바타 생성 실패",
+                            "message": "새 이미지로도 아바타 생성에 실패했습니다. 다른 이미지를 시도해주세요.",
+                            "retry_required": True
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    # DALL-E 3 이미지로도 실패
+                    error_message = "원본 이미지와 새로 생성된 이미지 모두로 아바타 생성에 실패했습니다."
+                    if retry_response:
+                        try:
+                            error_data = retry_response.json()
+                            error_message = error_data.get("message", error_message)
+                        except (json.JSONDecodeError, KeyError) as e:
+                            logger.warning(f"재시도 응답 파싱 실패: {e}")
+                    
+                    return Response({
+                        "success": False,
+                        "error": "VisionStory API 오류 (DALL-E 3 재시도 포함)",
+                        "message": error_message,
+                        "retry_required": True,
+                        "suggestion": "더 선명하고 정면을 바라보는 인물 사진을 업로드해주세요."
+                    }, status=status.HTTP_400_BAD_REQUEST)
                 
         finally:
             # 임시 파일 삭제

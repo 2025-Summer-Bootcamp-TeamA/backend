@@ -123,14 +123,24 @@ class GCSStorageService:
             parsed_url = urlparse(source_url)
             file_path = parsed_url.path.lstrip('/')
             
+            # GCS URL 구조: bucket-name/folder/filename
+            # 예: teama-buck/temp_avatars/filename.jpg
+            path_parts = file_path.split('/')
+            if len(path_parts) < 3:
+                logger.error(f"잘못된 GCS URL 구조: {file_path}")
+                return None
+            
+            bucket_name = path_parts[0]  # teama-buck
+            actual_folder = path_parts[1]  # temp_avatars
+            filename = '/'.join(path_parts[2:])  # filename.jpg
+            
             # 원본 폴더가 경로에 포함되어 있는지 확인
-            if not file_path.startswith(source_folder):
-                logger.error(f"원본 폴더가 경로에 포함되지 않음: {file_path}")
+            if actual_folder != source_folder:
+                logger.error(f"원본 폴더가 경로에 포함되지 않음: {actual_folder} != {source_folder}")
                 return None
             
             # 대상 경로 생성
-            relative_path = file_path[len(source_folder):].lstrip('/')
-            target_path = f"{target_folder}/{relative_path}"
+            target_path = f"{bucket_name}/{target_folder}/{filename}"
             
             # 파일 복사
             if default_storage.exists(file_path):
