@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   traefik:
     image: traefik:v2.9
@@ -31,12 +29,13 @@ services:
       # BasicAuth 인증 미들웨어 적용
       - "traefik.http.routers.mydashboard.middlewares=mydashboard-auth"
       - "traefik.http.middlewares.mydashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}"
+    networks:
+      - traefiknet
 
   backend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: backend
     restart: always
     env_file:
       - .env
@@ -49,6 +48,14 @@ services:
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
+      - "traefik.http.middlewares.backend-https-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.routers.backend.middlewares=backend-https-headers@docker"
+    networks:
+      - traefiknet
 
 volumes:
   traefik-certificates:
+
+networks:
+  traefiknet:
+    driver: bridge

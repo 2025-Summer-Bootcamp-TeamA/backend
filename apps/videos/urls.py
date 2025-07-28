@@ -1,10 +1,11 @@
-from django.urls import path
-from .views.video_creation_view import VideoCreationView
-from .views.video_crud_views import VideoUploadView
-from .views.visionstory_latest_view import VisionStoryLatestVideoView
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views.video_viewset import VideoViewSet
+
+# ViewSet을 위한 라우터 설정
+router = DefaultRouter(trailing_slash=False)
+router.register(r'videos', VideoViewSet, basename='video')
 
 urlpatterns = [
-    path('videos/generate', VideoCreationView.as_view(), name='video_generation'),
-    path('videos/visionstory', VisionStoryLatestVideoView.as_view(), name='visionstory_latest'),
-    path('videos', VideoUploadView.as_view(), name='video-upload'),
+    path('', include(router.urls)),
 ]
