@@ -57,6 +57,8 @@ class VideoCreationView(APIView):
                         'visionstoryId': openapi.Schema(type=openapi.TYPE_STRING, description='VisionStory 영상 ID'),
                         'videoUrl': openapi.Schema(type=openapi.TYPE_STRING, description='영상 URL (GCS)'),
                         'status': openapi.Schema(type=openapi.TYPE_STRING, description='영상 상태'),
+                        'museumName': openapi.Schema(type=openapi.TYPE_STRING, description='박물관명'),
+                        'placeId': openapi.Schema(type=openapi.TYPE_STRING, description='장소 ID'),
                         'artworkInfo': openapi.Schema(type=openapi.TYPE_OBJECT, description='추출된 작품 정보'),
                     }
                 )
@@ -155,6 +157,7 @@ class VideoCreationView(APIView):
                     title=title,
                     artist=artist,
                     place_id=place_id,
+                    museum_name=museum_name,  # 박물관명 저장
                     video_url=gcs_video_url,
                     thumbnail_url=video_info.thumbnail_url if video_info.thumbnail_url else None
                 )
@@ -171,6 +174,8 @@ class VideoCreationView(APIView):
                 'visionstoryId': video_info.video_id,  # VisionStory 영상 ID
                 'videoUrl': gcs_video_url,  # GCS URL
                 'status': video_info.status,  # 상태 정보
+                'museumName': museum_name,  # 박물관명
+                'placeId': place_id,  # 장소 ID
                 'artworkInfo': {
                     'title': title,
                     'artist': artist,

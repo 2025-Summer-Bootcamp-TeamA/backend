@@ -7,6 +7,7 @@ class Video(models.Model):
     title = models.CharField(max_length=100)
     artist = models.CharField(max_length=100, default="unknown")
     place_id = models.CharField(max_length=100, default="unknown")
+    museum_name = models.CharField(max_length=200, default="unknown")  # 박물관명 추가
     thumbnail_url = models.URLField(blank=True, null=True)
     video_url = models.URLField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

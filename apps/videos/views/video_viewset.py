@@ -48,8 +48,11 @@ class VideoViewSet(ViewSet):
                             properties={
                                 "id": openapi.Schema(type=openapi.TYPE_INTEGER, example=1),
                                 "placeId": openapi.Schema(type=openapi.TYPE_STRING, example="ChIJMwd0tBdzfDURdfxQfHwh4XQ"),
-                                "title": openapi.Schema(type=openapi.TYPE_STRING, example="경복궁 근정전 VR 체험"),
+                                "museumName": openapi.Schema(type=openapi.TYPE_STRING, example="루브르 박물관"),
+                                "title": openapi.Schema(type=openapi.TYPE_STRING, example="모나리자"),
+                                "artist": openapi.Schema(type=openapi.TYPE_STRING, example="레오나르도 다 빈치"),
                                 "thumbnailUrl": openapi.Schema(type=openapi.TYPE_STRING, example="https://example.com/thumbnails/video_001.jpg"),
+                                "videoUrl": openapi.Schema(type=openapi.TYPE_STRING, example="https://storage.googleapis.com/..."),
                                 "createdAt": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", example="2025-07-08T14:30:00Z"),
                             }
                         )
@@ -65,8 +68,11 @@ class VideoViewSet(ViewSet):
             {
                 "id": v.id,
                 "placeId": v.place_id,
+                "museumName": v.museum_name,  # 박물관명 추가
                 "title": v.title,
+                "artist": v.artist,
                 "thumbnailUrl": v.thumbnail_url,
+                "videoUrl": v.video_url,
                 "createdAt": v.created_at,
             } for v in videos
         ]
@@ -101,6 +107,8 @@ class VideoViewSet(ViewSet):
                         'visionstoryId': openapi.Schema(type=openapi.TYPE_STRING, description='VisionStory 영상 ID'),
                         'videoUrl': openapi.Schema(type=openapi.TYPE_STRING, description='영상 URL (GCS)'),
                         'status': openapi.Schema(type=openapi.TYPE_STRING, description='영상 상태'),
+                        'museumName': openapi.Schema(type=openapi.TYPE_STRING, description='박물관명'),
+                        'placeId': openapi.Schema(type=openapi.TYPE_STRING, description='장소 ID'),
                         'artworkInfo': openapi.Schema(type=openapi.TYPE_OBJECT, description='추출된 작품 정보'),
                     }
                 )
@@ -199,6 +207,7 @@ class VideoViewSet(ViewSet):
                     title=title,
                     artist=artist,
                     place_id=place_id,
+                    museum_name=museum_name,  # 박물관명 저장
                     video_url=gcs_video_url,
                     thumbnail_url=video_info.thumbnail_url if video_info.thumbnail_url else None
                 )
@@ -215,6 +224,8 @@ class VideoViewSet(ViewSet):
                 'visionstoryId': video_info.video_id,  # VisionStory 영상 ID
                 'videoUrl': gcs_video_url,  # GCS URL
                 'status': video_info.status,  # 상태 정보
+                'museumName': museum_name,  # 박물관명
+                'placeId': place_id,  # 장소 ID
                 'artworkInfo': {
                     'title': title,
                     'artist': artist,
