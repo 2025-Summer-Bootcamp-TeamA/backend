@@ -26,19 +26,9 @@ class OCRView(APIView):
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'result': openapi.Schema(
-                            type=openapi.TYPE_ARRAY,
-                            items=openapi.Schema(
-                                type=openapi.TYPE_OBJECT,
-                                properties={
-                                    'description': openapi.Schema(type=openapi.TYPE_STRING, description='추출된 텍스트'),
-                                    'bounds': openapi.Schema(
-                                        type=openapi.TYPE_ARRAY, 
-                                        description='텍스트 바운딩 박스 좌표',
-                                        items=openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_INTEGER))
-                                    )
-                                }
-                            )
+                        'ocr_text': openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            description='추출된 전체 텍스트'
                         )
                     }
                 )
@@ -61,6 +51,8 @@ class OCRView(APIView):
 
         try:
             result = detect_text(temp_path)
-            return Response({'result': result}, status=status.HTTP_200_OK)
+            # description만 모아서 하나의 문자열로 합치기
+            ocr_text = " ".join([item['description'] for item in result if 'description' in item])
+            return Response({'ocr_text': ocr_text}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
