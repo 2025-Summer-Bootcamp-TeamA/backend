@@ -10,12 +10,11 @@ class VideoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Video
-        fields = ['visionstoryId', 'title', 'artist', 'placeId', 'thumbnailUrl', 'videoUrl', 'duration']
+        fields = ['visionstoryId', 'title', 'artist', 'placeId', 'thumbnailUrl', 'videoUrl']
         extra_kwargs = {
             'title': {'required': True},
             'artist': {'required': True},
             'placeId': {'required': True},
             'videoUrl': {'required': True},
-            'duration': {'required': True},
             'thumbnailUrl': {'required': False},
         } 

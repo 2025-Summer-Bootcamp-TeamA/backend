@@ -9,7 +9,6 @@ class Video(models.Model):
     place_id = models.CharField(max_length=100, default="unknown")
     thumbnail_url = models.URLField(blank=True, null=True)
     video_url = models.URLField(blank=True, null=True)
-    duration = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
