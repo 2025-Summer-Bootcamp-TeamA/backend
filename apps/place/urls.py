@@ -5,7 +5,7 @@ app_name = 'place'
 
 urlpatterns = [
     path(
-        "museums/", 
+        "museums", 
         NearbyMuseumView.as_view(), 
         name="nearby_museums_search"
     ),
