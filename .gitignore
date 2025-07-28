@@ -80,3 +80,4 @@ google-credentials*.json
 *.service-account.json
 credentials/*.json
 credentials/service-account-key.json
+vision-ocr-sa.json
