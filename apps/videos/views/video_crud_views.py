@@ -10,7 +10,6 @@ from drf_yasg import openapi
 # ✅ 영상 목록 조회
 class VideoListView(APIView):
     permission_classes = [IsAuthenticated]
- 
 
     @swagger_auto_schema(
         tags=["videos"],
