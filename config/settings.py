@@ -16,12 +16,18 @@ load_dotenv()
 # 프로젝트 최상위 경로
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# 시크릿 키
-SECRET_KEY = os.getenv("SECRET_KEY", "insecure-key")
+# 시크릿 키 - 환경변수가 없으면 애플리케이션 시작 불가
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable must be set")
 
-# 개발용 설정
-DEBUG = True
-ALLOWED_HOSTS = ['hiedu.site', 'api.hiedu.site', 'localhost', '127.0.0.1', "*"]
+# 개발용 설정 - 환경변수로 제어
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+
+# ALLOWED_HOSTS 설정 - 환경변수로 제어
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+if DEBUG:
+    ALLOWED_HOSTS.extend(['hiedu.site', 'api.hiedu.site'])
 
 # Traefik 등의 프록시 환경에서 HTTPS 인식용
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -92,8 +98,6 @@ DB_USER = os.getenv('DB_USER', 'root')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'password')
 DB_NAME = os.getenv('DB_NAME', 'teama_db')
 
-
-
 # 데이터베이스 엔진 매핑
 DB_ENGINES = {
     'postgresql': 'django.db.backends.postgresql',
@@ -103,7 +107,6 @@ DB_ENGINES = {
 }
 
 # 데이터베이스 설정 구성
-print(DB_HOST)
 if DB_TYPE == 'sqlite3':
     # SQLite의 경우 파일 경로 사용
     DATABASES = {
@@ -191,7 +194,8 @@ if google_credentials_path and os.path.exists(google_credentials_path):
     STORAGES["default"]["OPTIONS"]["credentials"] = GS_CREDENTIALS
 else:
     GS_CREDENTIALS = None
-    print("Warning: Google Cloud credentials not found. Some features may not work.")
+    if DEBUG:
+        print("Warning: Google Cloud credentials not found. Some features may not work.")
 
 # 로깅 설정
 LOGGING = {
@@ -199,14 +203,14 @@ LOGGING = {
     'disable_existing_loggers': False,
     'handlers': {
         'console': {
-            'level': 'DEBUG',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'class': 'logging.StreamHandler',
             'stream': sys.stdout,
         },
     },
     'root': {
         'handlers': ['console'],
-        'level': 'DEBUG',
+        'level': 'DEBUG' if DEBUG else 'INFO',
     },
 }
 
@@ -242,8 +246,11 @@ SIMPLE_JWT = {
     'JTI_CLAIM': 'jti',
 }
 
-# CORS 설정
-CORS_ORIGIN_ALLOW_ALL = True
+# CORS 설정 - 환경변수로 제어
+CORS_ORIGIN_ALLOW_ALL = os.getenv("CORS_ORIGIN_ALLOW_ALL", "False").lower() == "true"
+if not CORS_ORIGIN_ALLOW_ALL:
+    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+CORS_ALLOW_CREDENTIALS = True
 
 # API 키 설정
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -267,7 +274,7 @@ RABBITMQ_USER = os.getenv('RABBITMQ_DEFAULT_USER', 'guest')
 RABBITMQ_PASS = os.getenv('RABBITMQ_DEFAULT_PASS', 'guest')
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', f'amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@rabbitmq:5672//')
 
-if RABBITMQ_USER == 'guest' and RABBITMQ_PASS == 'guest':
+if RABBITMQ_USER == 'guest' and RABBITMQ_PASS == 'guest' and DEBUG:
     print("WARNING: RabbitMQ using default guest credentials! Change for production.")
 
 # Redis 비밀번호가 설정되지 않은 경우 기본 연결 사용 (개발 환경용)
@@ -276,7 +283,8 @@ if REDIS_PASSWORD:
     CELERY_RESULT_BACKEND = f"redis://:{REDIS_PASSWORD}@redis:6379/0"
 else:
     CELERY_RESULT_BACKEND = "redis://redis:6379/0"
-    print("WARNING: Redis running without password protection!")
+    if DEBUG:
+        print("WARNING: Redis running without password protection!")
 
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'

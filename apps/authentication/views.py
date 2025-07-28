@@ -1,4 +1,5 @@
 import requests
+import logging
 from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,6 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 from .authentication import CustomJWTAuthentication
 
 GOOGLE_TOKEN_INFO_URL = "https://oauth2.googleapis.com/tokeninfo"
+logger = logging.getLogger(__name__)
 
 class GoogleLoginView(APIView):
     @swagger_auto_schema(
@@ -28,9 +30,9 @@ class GoogleLoginView(APIView):
             return Response({"error": "No id_token provided"}, status=400)
 
         # 1. 구글에 id_token 검증 요청 (timeout 및 예외 처리 추가)
-        if id_token == "test_token":
+        if settings.DEBUG and id_token == "test_token":
             token_info = {"sub": "test_user_123", "email": "test@example.com"}
-            print("Using test token - bypassing Google verification")
+            logger.debug("Using test token - bypassing Google verification")
         else:
             try:
                 resp = requests.get(
@@ -41,6 +43,7 @@ class GoogleLoginView(APIView):
                 if resp.status_code != 200:
                     return Response({"error": "Invalid id_token"}, status=400)
             except requests.RequestException as e:
+                logger.error(f"Token verification failed: {str(e)}")
                 return Response({"error": "Token verification failed"}, status=500)
             token_info = resp.json()
         sub = token_info.get("sub")

@@ -9,15 +9,14 @@ class Video(models.Model):
     place_id = models.CharField(max_length=100, default="unknown")
     thumbnail_url = models.URLField(blank=True, null=True)
     video_url = models.URLField(blank=True, null=True)
-    duration = models.PositiveIntegerField(default=0)  # 음수 불가
+    duration = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'videos'
 
     def clean(self):
-        if self.duration < 0:
-            raise ValidationError({'duration': 'Duration must be non-negative.'})
+        pass  # 다른 검증 로직이 추가되면 여기에 구현
 
     def __str__(self):
         return self.title

@@ -1,11 +1,11 @@
-from django.urls import path
-from .views.video_creation_view import VideoCreationView
-from .views.video_crud_views import (
-    VideoDetailView, VideoDeleteView
-)
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views.video_viewset import VideoViewSet
+
+# ViewSet을 위한 라우터 설정
+router = DefaultRouter(trailing_slash=False)
+router.register(r'videos', VideoViewSet, basename='video')
 
 urlpatterns = [
-    path('videos', VideoCreationView.as_view(), name='video_generation'),
-    path('videos/<int:video_id>', VideoDetailView.as_view(), name='video-detail'),
-    path('videos/<int:video_id>/delete', VideoDeleteView.as_view(), name='video-delete'),
+    path('', include(router.urls)),
 ]
