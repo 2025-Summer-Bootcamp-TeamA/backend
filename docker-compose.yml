@@ -7,7 +7,7 @@ services:
       - rabbitmq
       - redis
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.dev
+      - DJANGO_SETTINGS_MODULE=config.settings
       - CELERY_BROKER_URL=pyamqp://teama_user:SecurePass123!@rabbitmq:5672//
       - RABBITMQ_DEFAULT_USER=teama_user
       - RABBITMQ_DEFAULT_PASS=SecurePass123!
@@ -52,7 +52,7 @@ services:
       - rabbitmq
       - redis
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.dev
+      - DJANGO_SETTINGS_MODULE=config.settings
       - CELERY_BROKER_URL=pyamqp://teama_user:SecurePass123!@rabbitmq:5672//
       - RABBITMQ_DEFAULT_USER=teama_user
       - RABBITMQ_DEFAULT_PASS=SecurePass123!

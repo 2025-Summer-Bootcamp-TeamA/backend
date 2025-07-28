@@ -6,8 +6,8 @@ from django.http import JsonResponse
 from rest_framework.permissions import AllowAny
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from rest_framework_simplejwt.authentication import JWTAuthentication
 # Video views are now imported through apps.videos.urls
-from apps.authentication.views import GoogleLoginView
 
 # 루트 경로 처리 - API 서버 상태 확인
 def root_api_view(request):
@@ -24,8 +24,8 @@ def root_api_view(request):
 
 # 전체 경로를 위한 URL 패턴들 - 모든 API는 /api/v1으로 시작하고 도메인별로 분류됨
 api_urls = [
-    # OAuth 관련
-    path('api/v1/oauth/google', GoogleLoginView.as_view(), name='oauth_google'),
+    # Authentication 관련
+    path('api/v1/', include('apps.authentication.urls')),
     
     # Avatars 관련
     path('api/v1/avatars', include('apps.avatars.urls')),
@@ -49,10 +49,12 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=[AllowAny],
-    url='https://hiedu.site/',
+    authentication_classes=[JWTAuthentication],
+    url='https://hiedu.site/' if not settings.DEBUG else None,
+
     patterns=[  # 실제 API만 포함 - /api/v1 prefix + 도메인별 태그 분류
-        # OAuth
-        path('api/v1/oauth/google', GoogleLoginView.as_view()),
+        # Authentication
+        path('api/v1/', include('apps.authentication.urls')),
         
         # Avatars  
         path('api/v1/avatars', include('apps.avatars.urls')),
@@ -64,6 +66,15 @@ schema_view = get_schema_view(
         path('api/v1/places/', include('apps.place.urls')),
     ],
 )
+
+# 스웨거 보안 정의 추가
+schema_view.security_definitions = {
+    'Bearer': {
+        'type': 'apiKey',
+        'name': 'Authorization',
+        'in': 'header'
+    }
+}
 
 urlpatterns = [
     path('admin/', admin.site.urls),

@@ -1,8 +1,8 @@
 import asyncio
-from rest_framework.views import APIView
+from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from apps.core.services import ArtworkInfoOrchestrator
 from apps.videos.services import VideoGenerator
 from apps.videos.services.visionstory_service import VisionStoryService
@@ -15,11 +15,14 @@ from apps.videos.models import Video
 logger = logging.getLogger(__name__)
 
 
-class VideoCreationView(APIView):
+class VideoViewSet(ViewSet):
     """
-    작품 기반 영상 생성 API
+    영상 관련 모든 기능을 제공하는 ViewSet
     
-    OCR 텍스트를 입력받아 자동으로 영상을 생성하는 기능
+    - GET /videos/ : 영상 목록 조회
+    - POST /videos/ : 영상 생성
+    - GET /videos/{id}/ : 영상 상세 조회
+    - DELETE /videos/{id}/ : 영상 삭제
     """
     permission_classes = [IsAuthenticated]
     
@@ -27,7 +30,48 @@ class VideoCreationView(APIView):
         super().__init__(**kwargs)
         self.orchestrator = ArtworkInfoOrchestrator()
         self.video_generator = VideoGenerator()
-    
+
+    @swagger_auto_schema(
+        tags=["videos"],
+        operation_summary="영상 목록 조회",
+        operation_description="JWT 토큰 기반으로 사용자의 영상 목록을 조회합니다.",
+        security=[{'Bearer': []}],
+        responses={200: openapi.Response(
+            description="영상 목록",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "videos": openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "id": openapi.Schema(type=openapi.TYPE_INTEGER, example=1),
+                                "placeId": openapi.Schema(type=openapi.TYPE_STRING, example="ChIJMwd0tBdzfDURdfxQfHwh4XQ"),
+                                "title": openapi.Schema(type=openapi.TYPE_STRING, example="경복궁 근정전 VR 체험"),
+                                "thumbnailUrl": openapi.Schema(type=openapi.TYPE_STRING, example="https://example.com/thumbnails/video_001.jpg"),
+                                "createdAt": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", example="2025-07-08T14:30:00Z"),
+                            }
+                        )
+                    )
+                }
+            )
+        )}
+    )
+    def list(self, request):
+        """영상 목록 조회"""
+        videos = Video.objects.filter(user=request.user).order_by('-created_at')
+        results = [
+            {
+                "id": v.id,
+                "placeId": v.place_id,
+                "title": v.title,
+                "thumbnailUrl": v.thumbnail_url,
+                "createdAt": v.created_at,
+            } for v in videos
+        ]
+        return Response({"videos": results})
+
     @swagger_auto_schema(
         tags=["videos"],
         operation_summary="작품 기반 영상 생성",
@@ -63,7 +107,7 @@ class VideoCreationView(APIView):
             500: openapi.Response(description="서버 오류")
         }
     )
-    def post(self, request):
+    def create(self, request):
         """작품 기반 영상 생성"""
         try:
             # 1단계: 요청 데이터 검증
@@ -159,4 +203,71 @@ class VideoCreationView(APIView):
             return Response(
                 {'error': f'영상 생성 중 오류가 발생했습니다: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            ) 
+            )
+
+    @swagger_auto_schema(
+        tags=["videos"],
+        operation_summary="영상 상세 조회",
+        operation_description="JWT 토큰 기반으로 본인 영상 상세정보를 조회합니다.",
+        security=[{'Bearer': []}],
+        responses={200: openapi.Response(
+            description="영상 상세 정보",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "id": openapi.Schema(type=openapi.TYPE_INTEGER, example=1),
+                    "placeId": openapi.Schema(type=openapi.TYPE_STRING),
+                    "title": openapi.Schema(type=openapi.TYPE_STRING),
+                    "description": openapi.Schema(type=openapi.TYPE_STRING, description="작품 설명", example="작품 설명"),
+                    "thumbnailUrl": openapi.Schema(type=openapi.TYPE_STRING),
+                    "videoUrl": openapi.Schema(type=openapi.TYPE_STRING),
+                    "createdAt": openapi.Schema(type=openapi.TYPE_STRING, format="date-time"),
+                }
+            )
+        )}
+    )
+    def retrieve(self, request, pk=None):
+        """영상 상세 조회"""
+        try:
+            video = Video.objects.get(id=pk, user=request.user)
+        except Video.DoesNotExist:
+            return Response({"message": "영상이 없습니다."}, status=404)
+
+        return Response({
+            "id": video.id,
+            "placeId": video.place_id,
+            "title": video.title,
+            "description": video.artist,
+            "thumbnailUrl": video.thumbnail_url,
+            "videoUrl": video.video_url,
+            "createdAt": video.created_at,
+        })
+
+    @swagger_auto_schema(
+        tags=["videos"],
+        operation_summary="영상 삭제",
+        operation_description="본인의 영상을 삭제합니다.",
+        security=[{'Bearer': []}],
+        responses={
+            200: openapi.Response(
+                description="삭제 성공",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "id": openapi.Schema(type=openapi.TYPE_INTEGER, example=1),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="영상이 성공적으로 삭제되었습니다"),
+                    }
+                )
+            ),
+            404: "존재하지 않음 또는 권한 없음"
+        }
+    )
+    def destroy(self, request, pk=None):
+        """영상 삭제"""
+        try:
+            video = Video.objects.get(id=pk, user=request.user)
+        except Video.DoesNotExist:
+            return Response({"message": "영상이 없습니다."}, status=404)
+
+        video.delete()
+        return Response({"id": pk, "message": "영상이 성공적으로 삭제되었습니다"}) 
