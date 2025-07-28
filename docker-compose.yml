@@ -12,7 +12,8 @@ services:
       - RABBITMQ_DEFAULT_USER=teama_user
       - RABBITMQ_DEFAULT_PASS=SecurePass123!
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/credential/teama-service-account.json
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/teama-service-account.json
+      - GOOGLE_CLOUD_PROJECT_ID=sturdy-apricot-464807-r9
       - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
       - SMITHERY_API_KEY=${SMITHERY_API_KEY:-dummy_key}
       - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY:-dummy_key}
@@ -29,7 +30,8 @@ services:
     #   - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
     #   - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
     #   - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-    #   - GOOGLE_APPLICATION_CREDENTIALS=/app/credential/teama-service-account.json
+    #   - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/teama-service-account.json
+    #   - GOOGLE_CLOUD_PROJECT_ID=sturdy-apricot-464807-r9
     #   - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
     #   - SMITHERY_API_KEY=${SMITHERY_API_KEY:-dummy_key}
     #   - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY:-dummy_key}
@@ -42,7 +44,7 @@ services:
     #   - DB_PASSWORD=${DB_PASSWORD:-password}
     #   - DB_NAME=${DB_NAME:-backend}
     volumes:
-      - ./credential:/app/credential
+      - ./credentials:/app/credentials
 
   celery:
     build: .
@@ -57,7 +59,8 @@ services:
       - RABBITMQ_DEFAULT_USER=teama_user
       - RABBITMQ_DEFAULT_PASS=SecurePass123!
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/credential/teama-service-account.json
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/teama-service-account.json
+      - GOOGLE_CLOUD_PROJECT_ID=sturdy-apricot-464807-r9
       - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
       - SMITHERY_API_KEY=${SMITHERY_API_KEY:-dummy_key}
       - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY:-dummy_key}
@@ -70,7 +73,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - DB_NAME=${DB_NAME:-backend}
     volumes:
-      - ./credential:/app/credential
+      - ./credentials:/app/credentials
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -89,12 +92,12 @@ services:
       - "6379:6379"
     command: >
       sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
-               echo "Starting Redis with password protection...";
-               redis-server --requirepass "$$REDIS_PASSWORD";
-             else
-               echo "WARNING: Starting Redis WITHOUT password protection!";
-               echo "This is ONLY safe for development environments.";
-               redis-server;
-             fi'
+        echo "Starting Redis with password protection...";
+        redis-server --requirepass "$$REDIS_PASSWORD";
+          else
+        echo "WARNING: Starting Redis WITHOUT password protection!";
+        echo "This is ONLY safe for development environments.";
+        redis-server;
+          fi'
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
