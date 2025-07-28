@@ -44,7 +44,7 @@ def _call_visionstory_api(image_url):
     
     logger.info(f"VisionStory API 호출 시작: {image_url}")
     logger.info(f"API URL: {VISIONSTORY_GENERATE_URL}")
-    logger.info(f"요청 헤더: {headers}")
+    logger.info(f"요청 헤더: {{k: v if k != 'X-API-Key' else '***' for k, v in headers.items()}}")
     logger.info(f"요청 페이로드: {payload}")
     
     try:
