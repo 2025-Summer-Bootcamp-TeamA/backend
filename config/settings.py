@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from decouple import config
+from django.utils import tree
 from dotenv import load_dotenv
 
 # PyMySQL을 MySQLdb로 사용하도록 설정
@@ -21,7 +22,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-q6z$d70f^g6b!=wcuk^$bntvd!p1^-n0pxlmg_c*a_vu0nlvj9')
 
 # 개발용 설정
-DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = ['hiedu.site', 'api.hiedu.site', 'localhost', '127.0.0.1']
 
 # Traefik 등의 프록시 환경에서 HTTPS 인식용

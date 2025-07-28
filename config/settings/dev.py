@@ -1,4 +1,5 @@
 import os
+import sys
 from .base import *
 from dotenv import load_dotenv
 from decouple import config
@@ -79,3 +80,10 @@ else:
     GS_CREDENTIALS = None
     # 개발 환경에서는 로그로 알림
     print("Warning: Google Cloud credentials not found. Some features may not work.")
+
+# REST Framework 설정
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'apps.authentication.authentication.CustomJWTAuthentication',
+    ],
+}
