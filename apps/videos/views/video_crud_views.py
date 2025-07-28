@@ -82,7 +82,7 @@ class VideoDetailView(APIView):
         try:
             video = Video.objects.get(id=video_id, user=request.user)
         except Video.DoesNotExist:
-            return Response({"error": "존재하지 않거나 권한이 없는 영상입니다."}, status=404)
+            return Response({"message": "영상이 없습니다."}, status=404)
 
         return Response({
             "id": video.id,
@@ -122,7 +122,7 @@ class VideoDeleteView(APIView):
         try:
             video = Video.objects.get(id=video_id, user=request.user)
         except Video.DoesNotExist:
-            return Response({"error": "존재하지 않거나 권한이 없는 영상입니다."}, status=404)
+            return Response({"message": "영상이 없습니다."}, status=404)
 
         video.delete()
         return Response({"id": video_id, "message": "영상이 성공적으로 삭제되었습니다"})
