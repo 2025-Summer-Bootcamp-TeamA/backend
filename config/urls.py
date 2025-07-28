@@ -21,6 +21,9 @@ api_urls = [
     
     # Places 관련
     path('api/v1/places/', include('apps.place.urls')),
+    
+    # Core 관련 (OCR 등)
+    path('api/v1/ocr', include('apps.core.urls')),  # '/ocr'로 직접 연결
 ]
 
 # Swagger 설정 - 전체 경로 표시용
@@ -47,6 +50,9 @@ schema_view = get_schema_view(
         
         # Places
         path('api/v1/places/', include('apps.place.urls')),
+        
+        # Core
+        path('api/v1/ocr', include('apps.core.urls')),  # '/ocr'로 직접 연결
     ],
 )
 
