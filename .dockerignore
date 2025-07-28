@@ -1,15 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
 .venv/
 venv/
+ENV/
 env/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.log
-*.tmp
-*.egg-info/
-dist/
-build/
-node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
-.env 
+Thumbs.db
+
+# Logs
+*.log
+
+# Database
+*.sqlite3
+*.db
+
+# Media files
+media/
+
+# Static files
+static/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore 
+
+# Google Cloud 서비스 계정 키 파일
+service-account*.json
+*-service-account.json
+google-credentials*.json
+*.service-account.json
+credentials/*.json
+credentials/service-account-key.json
+vision-ocr-sa.json
