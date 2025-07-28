@@ -111,6 +111,13 @@ class GeminiService:
     def _setup_credentials(self, credentials_path: Optional[str]) -> str:
         """서비스 계정 인증 정보 설정"""
         try:
+            # 1. 환경변수에서 직접 서비스 계정 정보 확인
+            project_id = os.getenv('GOOGLE_CLOUD_PROJECT_ID')
+            if project_id:
+                logger.info(f"환경변수에서 프로젝트 ID 사용: {project_id}")
+                return project_id
+            
+            # 2. 파일에서 서비스 계정 정보 읽기
             if credentials_path:
                 cred_file = credentials_path
             else:

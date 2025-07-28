@@ -13,6 +13,7 @@ services:
       - RABBITMQ_DEFAULT_PASS=SecurePass123!
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/teama-service-account.json
+      - GOOGLE_CLOUD_PROJECT_ID=sturdy-apricot-464807-r9
       - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
       - SMITHERY_API_KEY=${SMITHERY_API_KEY:-dummy_key}
       - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY:-dummy_key}
@@ -30,6 +31,7 @@ services:
     #   - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
     #   - REDIS_PASSWORD=${REDIS_PASSWORD:-}
     #   - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/teama-service-account.json
+    #   - GOOGLE_CLOUD_PROJECT_ID=sturdy-apricot-464807-r9
     #   - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
     #   - SMITHERY_API_KEY=${SMITHERY_API_KEY:-dummy_key}
     #   - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY:-dummy_key}
@@ -58,6 +60,7 @@ services:
       - RABBITMQ_DEFAULT_PASS=SecurePass123!
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/teama-service-account.json
+      - GOOGLE_CLOUD_PROJECT_ID=sturdy-apricot-464807-r9
       - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
       - SMITHERY_API_KEY=${SMITHERY_API_KEY:-dummy_key}
       - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY:-dummy_key}
