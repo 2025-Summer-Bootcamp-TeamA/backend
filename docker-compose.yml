@@ -14,6 +14,7 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/teama-service-account.json
       - GOOGLE_CLOUD_PROJECT_ID=sturdy-apricot-464807-r9
+      - DISABLE_AUTH=${DISABLE_AUTH:-false}
       - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
       - SMITHERY_API_KEY=${SMITHERY_API_KEY:-dummy_key}
       - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY:-dummy_key}
@@ -25,24 +26,6 @@ services:
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - DB_NAME=${DB_NAME:-backend} 
-    # environment:
-    #   - CELERY_BROKER_URL=${CELERY_BROKER_URL:?must_be_set}
-    #   - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
-    #   - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
-    #   - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-    #   - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/teama-service-account.json
-    #   - GOOGLE_CLOUD_PROJECT_ID=sturdy-apricot-464807-r9
-    #   - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
-    #   - SMITHERY_API_KEY=${SMITHERY_API_KEY:-dummy_key}
-    #   - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY:-dummy_key}
-    #   - OPENAI_API_KEY=${OPENAI_API_KEY:-dummy_key}
-    #   - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-default-key}
-    #   - DB_TYPE=${DB_TYPE:-sqlite}
-    #   - DB_HOST=${DB_HOST:-localhost}
-    #   - DB_PORT=${DB_PORT:-5432}
-    #   - DB_USER=${DB_USER:-postgres}
-    #   - DB_PASSWORD=${DB_PASSWORD:-password}
-    #   - DB_NAME=${DB_NAME:-backend}
     volumes:
       - ./credentials:/app/credentials
 
@@ -61,6 +44,7 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/teama-service-account.json
       - GOOGLE_CLOUD_PROJECT_ID=sturdy-apricot-464807-r9
+      - DISABLE_AUTH=${DISABLE_AUTH:-false}
       - BRAVE_API_KEY=${BRAVE_API_KEY:-dummy_key}
       - SMITHERY_API_KEY=${SMITHERY_API_KEY:-dummy_key}
       - VISIONSTORY_API_KEY=${VISIONSTORY_API_KEY:-dummy_key}

@@ -1,15 +1,17 @@
 import asyncio
+import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+import os
+
 from apps.core.services import ArtworkInfoOrchestrator
 from apps.videos.services import VideoGenerator
 from apps.videos.services.visionstory_service import VisionStoryService
 from apps.gcs.storage_service import upload_video_to_gcs
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
-import logging
 from apps.videos.models import Video
 
 logger = logging.getLogger(__name__)
@@ -21,7 +23,13 @@ class VideoCreationView(APIView):
     
     OCR 텍스트를 입력받아 자동으로 영상을 생성하는 기능
     """
-    permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """환경변수로 인증 제어"""
+        # 개발/테스트 환경에서는 인증 비활성화
+        if os.getenv('DISABLE_AUTH', 'false').lower() == 'true':
+            return [AllowAny()]
+        return [IsAuthenticated()]
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -152,9 +160,9 @@ class VideoCreationView(APIView):
                 title = artwork_info.basic_info.title if artwork_info.basic_info and artwork_info.basic_info.title else 'Unknown Artwork'
                 artist = artwork_info.basic_info.artist if artwork_info.basic_info and artwork_info.basic_info.artist else 'Unknown Artist'
                 
-                # Video 모델에 저장
+                # Video 모델에 저장 (인증된 사용자만 user 필드 설정)
                 video = Video.objects.create(
-                    user=request.user,
+                    user=request.user if request.user.is_authenticated else None,
                     title=title,
                     artist=artist,
                     place_id=place_id,
