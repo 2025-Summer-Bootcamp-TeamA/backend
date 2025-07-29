@@ -1,15 +1,17 @@
 import asyncio
+import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+import os
+
 from apps.core.services import ArtworkInfoOrchestrator
 from apps.videos.services import VideoGenerator
 from apps.videos.services.visionstory_service import VisionStoryService
 from apps.gcs.storage_service import upload_video_to_gcs
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
-import logging
 from apps.videos.models import Video
 
 logger = logging.getLogger(__name__)
@@ -21,7 +23,13 @@ class VideoCreationView(APIView):
     
     OCR 텍스트를 입력받아 자동으로 영상을 생성하는 기능
     """
-    permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """환경변수로 인증 제어"""
+        # 개발/테스트 환경에서는 인증 비활성화
+        if os.getenv('DISABLE_AUTH', 'false').lower() == 'true':
+            return [AllowAny()]
+        return [IsAuthenticated()]
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -38,6 +46,7 @@ class VideoCreationView(APIView):
             properties={
                 'ocrText': openapi.Schema(type=openapi.TYPE_STRING, description='OCR로 추출된 텍스트', example='모나리자\n레오나르도 다 빈치\n1503-1519년'),
                 'museumName': openapi.Schema(type=openapi.TYPE_STRING, description='박물관/미술관 이름', example='루브르 박물관'),
+                'placeId': openapi.Schema(type=openapi.TYPE_STRING, description='장소 ID (선택적, 미제공 시 unknown으로 저장)', example='ChIJMwd0tBdzfDURdfxQfHwh4XQ'),
                 'avatarId': openapi.Schema(type=openapi.TYPE_STRING, description='사용할 아바타 ID (선택적, 미제공 시 최신 아바타 자동 사용)', example='4321918387609092991'),
                 'voiceId': openapi.Schema(type=openapi.TYPE_STRING, description='사용할 음성 ID', example='Alice'),
                 'aspectRatio': openapi.Schema(type=openapi.TYPE_STRING, description='비디오 비율', example='9:16'),
@@ -52,9 +61,12 @@ class VideoCreationView(APIView):
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'videoId': openapi.Schema(type=openapi.TYPE_STRING, description='영상 ID'),
+                        'videoId': openapi.Schema(type=openapi.TYPE_INTEGER, description='DB에 저장된 영상 ID'),
+                        'visionstoryId': openapi.Schema(type=openapi.TYPE_STRING, description='VisionStory 영상 ID'),
                         'videoUrl': openapi.Schema(type=openapi.TYPE_STRING, description='영상 URL (GCS)'),
                         'status': openapi.Schema(type=openapi.TYPE_STRING, description='영상 상태'),
+                        'museumName': openapi.Schema(type=openapi.TYPE_STRING, description='박물관명'),
+                        'placeId': openapi.Schema(type=openapi.TYPE_STRING, description='장소 ID'),
                         'artworkInfo': openapi.Schema(type=openapi.TYPE_OBJECT, description='추출된 작품 정보'),
                     }
                 )
@@ -138,20 +150,51 @@ class VideoCreationView(APIView):
                     'error_message': video_info.error_message
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
-            # 4단계: 응답 데이터 구성
+            # 4단계: DB에 영상 정보 저장
+            video = None
+            try:
+                # place_id는 요청에서 받거나 기본값 사용
+                place_id = request.data.get('placeId', 'unknown')
+                
+                # 작품 제목과 작가 정보 추출
+                title = artwork_info.basic_info.title if artwork_info.basic_info and artwork_info.basic_info.title else 'Unknown Artwork'
+                artist = artwork_info.basic_info.artist if artwork_info.basic_info and artwork_info.basic_info.artist else 'Unknown Artist'
+                
+                # Video 모델에 저장 (인증된 사용자만 user 필드 설정)
+                video = Video.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
+                    title=title,
+                    artist=artist,
+                    place_id=place_id,
+                    museum_name=museum_name,  # 박물관명 저장
+                    video_url=gcs_video_url,
+                    thumbnail_url=video_info.thumbnail_url if video_info.thumbnail_url else None
+                )
+                
+                logger.info(f"DB에 영상 정보 저장 완료: video_id={video.id}")
+                
+            except Exception as db_error:
+                logger.error(f"DB 저장 중 오류: {str(db_error)}")
+                # DB 저장 실패해도 영상 생성은 성공했으므로 경고만 남기고 계속 진행
+                # video 변수는 None으로 유지
+            
+            # 5단계: 응답 데이터 구성
             response_data = {
-                'videoId': video_info.video_id,  # 영상 ID
+                'videoId': video.id if video else None,  # DB에 저장된 영상 ID
+                'visionstoryId': video_info.video_id,  # VisionStory 영상 ID
                 'videoUrl': gcs_video_url,  # GCS URL
                 'status': video_info.status,  # 상태 정보
+                'museumName': museum_name,  # 박물관명
+                'placeId': place_id,  # 장소 ID
                 'artworkInfo': {
-                    'title': artwork_info.basic_info.title if artwork_info.basic_info and artwork_info.basic_info.title else '',
-                    'artist': artwork_info.basic_info.artist if artwork_info.basic_info and artwork_info.basic_info.artist else '',
+                    'title': title,
+                    'artist': artist,
                     'description': artwork_info.web_search.description if artwork_info.web_search and artwork_info.web_search.description else '',
                     'videoScript': artwork_info.video_script.script_content if artwork_info.video_script and artwork_info.video_script.script_content else ''
                 }
             }
             
-            logger.info(f"영상 생성 및 GCS 업로드 완료: video_id={video_info.video_id}")
+            logger.info(f"영상 생성, GCS 업로드, DB 저장 완료: video_id={video.id if video else 'N/A (DB 저장 실패)'}")
             return Response(response_data, status=status.HTTP_201_CREATED)  # 201 Created
                 
         except Exception as e:

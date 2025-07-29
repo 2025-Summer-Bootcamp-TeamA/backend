@@ -7,9 +7,10 @@ class Video(models.Model):
     title = models.CharField(max_length=100)
     artist = models.CharField(max_length=100, default="unknown")
     place_id = models.CharField(max_length=100, default="unknown")
-    thumbnail_url = models.URLField(blank=True, null=True)
-    video_url = models.URLField(blank=True, null=True)
-    duration = models.PositiveIntegerField(default=0)
+    museum_name = models.CharField(max_length=200, default="unknown")  # 박물관명 추가
+    description = models.TextField(blank=True, null=True)  # 작품 설명 추가
+    thumbnail_url = models.URLField(blank=True, null=True, max_length=1000)
+    video_url = models.URLField(blank=True, null=True, max_length=1000)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

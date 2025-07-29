@@ -77,10 +77,11 @@ class ContentFetchEnricher:
                 )
         except Exception as e:
             logger.error(f"Fetch MCP 오류: {str(e)}")
+            # Fetch 실패 시에도 기존 enriched_description을 유지
             return ContentFetchInfo(
                 performed=False,
                 fetch_results=[],
-                content_enriched_description=None,
+                content_enriched_description=web_search_info.enriched_description,  # 기존 설명 유지
                 fetch_timestamp=datetime.now()
             )
     

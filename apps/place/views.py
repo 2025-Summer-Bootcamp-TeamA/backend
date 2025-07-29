@@ -54,7 +54,7 @@ class NearbyMuseumView(APIView):
         - 위도: -90 ~ 90
         - 경도: -180 ~ 180
         """,
-        tags=['Places']
+        tags=['places']
     )
     def post(self, request, *args, **kwargs):
         """근처 박물관을 검색합니다."""
