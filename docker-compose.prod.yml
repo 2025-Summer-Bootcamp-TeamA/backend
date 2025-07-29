@@ -56,9 +56,11 @@ services:
   celery:
     build: .
     command: celery -A config worker --loglevel=info
+    restart: always
     depends_on:
       - rabbitmq
       - redis
+      - backend
     env_file:
       - .env
     volumes:
@@ -73,8 +75,8 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      - RABBITMQ_DEFAULT_USER=teama_user
-      - RABBITMQ_DEFAULT_PASS=SecurePass123!
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-teama_user}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
     networks:
       - traefiknet
 
