@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from django.db import transaction
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
@@ -206,25 +207,26 @@ class VideoViewSet(ViewSet):
             # 4단계: DB에 영상 정보 저장
             video = None
             try:
-                # place_id는 요청에서 받거나 기본값 사용
-                place_id = request.data.get('placeId', 'unknown')
-                
-                # 작품 제목과 작가 정보 추출
-                title = artwork_info.basic_info.title if artwork_info.basic_info and artwork_info.basic_info.title else 'Unknown Artwork'
-                artist = artwork_info.basic_info.artist if artwork_info.basic_info and artwork_info.basic_info.artist else 'Unknown Artist'
-                
-                # Video 모델에 저장 (인증된 사용자만 user 필드 설정)
-                video = Video.objects.create(
-                    user=request.user if request.user.is_authenticated else None,
-                    title=title,
-                    artist=artist,
-                    place_id=place_id,
-                    museum_name=museum_name,  # 박물관명 저장
-                    video_url=gcs_video_url,
-                    thumbnail_url=video_info.thumbnail_url if video_info.thumbnail_url else None
-                )
-                
-                logger.info(f"DB에 영상 정보 저장 완료: video_id={video.id}")
+                with transaction.atomic():
+                    # place_id는 요청에서 받거나 기본값 사용
+                    place_id = request.data.get('placeId', 'unknown')
+                    
+                    # 작품 제목과 작가 정보 추출
+                    title = getattr(getattr(artwork_info, 'basic_info', None), 'title', None) or 'Unknown Artwork'
+                    artist = getattr(getattr(artwork_info, 'basic_info', None), 'artist', None) or 'Unknown Artist'
+                    
+                    # Video 모델에 저장 (인증된 사용자만 user 필드 설정)
+                    video = Video.objects.create(
+                        user=request.user if request.user.is_authenticated else None,
+                        title=title,
+                        artist=artist,
+                        place_id=place_id,
+                        museum_name=museum_name,  # 박물관명 저장
+                        video_url=gcs_video_url,
+                        thumbnail_url=video_info.thumbnail_url if video_info.thumbnail_url else None
+                    )
+                    
+                    logger.info(f"DB에 영상 정보 저장 완료: video_id={video.id}")
                 
             except Exception as db_error:
                 logger.error(f"DB 저장 중 오류: {str(db_error)}")
