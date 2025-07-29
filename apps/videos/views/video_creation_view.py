@@ -143,6 +143,7 @@ class VideoCreationView(APIView):
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
             # 4단계: DB에 영상 정보 저장
+            video = None
             try:
                 # place_id는 요청에서 받거나 기본값 사용
                 place_id = request.data.get('placeId', 'unknown')
@@ -167,10 +168,11 @@ class VideoCreationView(APIView):
             except Exception as db_error:
                 logger.error(f"DB 저장 중 오류: {str(db_error)}")
                 # DB 저장 실패해도 영상 생성은 성공했으므로 경고만 남기고 계속 진행
+                # video 변수는 None으로 유지
             
             # 5단계: 응답 데이터 구성
             response_data = {
-                'videoId': video.id if 'video' in locals() else None,  # DB에 저장된 영상 ID
+                'videoId': video.id if video else None,  # DB에 저장된 영상 ID
                 'visionstoryId': video_info.video_id,  # VisionStory 영상 ID
                 'videoUrl': gcs_video_url,  # GCS URL
                 'status': video_info.status,  # 상태 정보
@@ -184,7 +186,7 @@ class VideoCreationView(APIView):
                 }
             }
             
-            logger.info(f"영상 생성, GCS 업로드, DB 저장 완료: video_id={video.id if 'video' in locals() else 'N/A'}")
+            logger.info(f"영상 생성, GCS 업로드, DB 저장 완료: video_id={video.id if video else 'N/A (DB 저장 실패)'}")
             return Response(response_data, status=status.HTTP_201_CREATED)  # 201 Created
                 
         except Exception as e:
