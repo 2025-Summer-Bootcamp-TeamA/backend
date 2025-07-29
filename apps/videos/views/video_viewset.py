@@ -215,6 +215,9 @@ class VideoViewSet(ViewSet):
                     title = getattr(getattr(artwork_info, 'basic_info', None), 'title', None) or 'Unknown Artwork'
                     artist = getattr(getattr(artwork_info, 'basic_info', None), 'artist', None) or 'Unknown Artist'
                     
+                    # 작품 설명 추출
+                    description = getattr(getattr(artwork_info, 'web_search', None), 'description', None) or ''
+                
                     # Video 모델에 저장 (인증된 사용자만 user 필드 설정)
                     video = Video.objects.create(
                         user=request.user if request.user.is_authenticated else None,
@@ -222,11 +225,12 @@ class VideoViewSet(ViewSet):
                         artist=artist,
                         place_id=place_id,
                         museum_name=museum_name,  # 박물관명 저장
+                        description=description,  # 작품 설명 저장
                         video_url=gcs_video_url,
                         thumbnail_url=video_info.thumbnail_url if video_info.thumbnail_url else None
                     )
-                    
-                    logger.info(f"DB에 영상 정보 저장 완료: video_id={video.id}")
+                
+                logger.info(f"DB에 영상 정보 저장 완료: video_id={video.id}")
                 
             except Exception as db_error:
                 logger.error(f"DB 저장 중 오류: {str(db_error)}")
@@ -272,7 +276,8 @@ class VideoViewSet(ViewSet):
                     "id": openapi.Schema(type=openapi.TYPE_INTEGER, example=1),
                     "placeId": openapi.Schema(type=openapi.TYPE_STRING),
                     "title": openapi.Schema(type=openapi.TYPE_STRING),
-                    "description": openapi.Schema(type=openapi.TYPE_STRING, description="작품 설명", example="작품 설명"),
+                    "artist": openapi.Schema(type=openapi.TYPE_STRING, description="작가명", example="레오나르도 다 빈치"),
+                    "description": openapi.Schema(type=openapi.TYPE_STRING, description="작품 설명", example="이 작품은 레오나르도 다 빈치가 1503년부터 1519년까지 그린 유화화입니다."),
                     "thumbnailUrl": openapi.Schema(type=openapi.TYPE_STRING),
                     "videoUrl": openapi.Schema(type=openapi.TYPE_STRING),
                     "createdAt": openapi.Schema(type=openapi.TYPE_STRING, format="date-time"),
@@ -295,7 +300,8 @@ class VideoViewSet(ViewSet):
             "id": video.id,
             "placeId": video.place_id,
             "title": video.title,
-            "description": video.artist,
+            "artist": video.artist,
+            "description": video.description,
             "thumbnailUrl": video.thumbnail_url,
             "videoUrl": video.video_url,
             "createdAt": video.created_at,

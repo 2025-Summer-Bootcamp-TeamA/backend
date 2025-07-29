@@ -111,23 +111,30 @@ class WebSearchEnricher:
 
             if urls:
                 logger.info(f"URL 추출 완료: {len(urls)}개")
-                fetch_results = _run_async_safely(self.fetch_service.fetch_urls(urls, max_concurrent=3, timeout=30))
-                all_contents = [r["content"] for r in fetch_results if r.get("success") and r.get("content")]
-                if all_contents:
-                    logger.info(f"콘텐츠 추출 완료: {len(all_contents)}개")
-                    prompt = (
-                        f"다음은 '{basic_info.title}' 작품에 대한 다양한 웹 본문입니다.\n"
-                        "이 정보들을 참고하여, 관람객이 이해하기 쉽고 풍부한 작품 설명을 500자 이내로 써주세요.\n\n"
-                    )
-                    for i, content in enumerate(all_contents, 1):
-                        prompt += f"[자료 {i}]\n{content[:1000]}\n\n"
-                    logger.info("Gemini로 설명 생성 시작")
-                    gemini_description = self.gemini_service.generate_content(prompt)
-                    enriched_description = gemini_description or "정보를 찾을 수 없습니다."
-                    logger.info(f"설명 생성 완료: {enriched_description[:100]}...")
-                else:
-                    enriched_description = "정보를 찾을 수 없습니다."
-                    logger.info("웹 콘텐츠가 없어 기본 설명 사용")
+                try:
+                    fetch_results = _run_async_safely(self.fetch_service.fetch_urls(urls, max_concurrent=3, timeout=30))
+                    all_contents = [r["content"] for r in fetch_results if r.get("success") and r.get("content")]
+                    if all_contents:
+                        logger.info(f"콘텐츠 추출 완료: {len(all_contents)}개")
+                        prompt = (
+                            f"다음은 '{basic_info.title}' 작품에 대한 다양한 웹 본문입니다.\n"
+                            "이 정보들을 참고하여, 관람객이 이해하기 쉽고 풍부한 작품 설명을 500자 이내로 써주세요.\n\n"
+                        )
+                        for i, content in enumerate(all_contents, 1):
+                            prompt += f"[자료 {i}]\n{content[:1000]}\n\n"
+                        logger.info("Gemini로 설명 생성 시작")
+                        gemini_description = self.gemini_service.generate_content(prompt)
+                        enriched_description = gemini_description or "정보를 찾을 수 없습니다."
+                        logger.info(f"설명 생성 완료: {enriched_description[:100]}...")
+                    else:
+                        # Fetch 실패 시 Brave Search 스니펫만으로 설명 생성
+                        enriched_description = self._create_description_from_search_snippets(search_results, basic_info.title)
+                        logger.info("Fetch 실패로 Brave Search 스니펫만 사용")
+                except Exception as fetch_error:
+                    logger.warning(f"Fetch MCP 서비스 오류: {fetch_error}")
+                    # Fetch 실패 시 Brave Search 스니펫만으로 설명 생성
+                    enriched_description = self._create_description_from_search_snippets(search_results, basic_info.title)
+                    logger.info("Fetch MCP 실패로 Brave Search 스니펫만 사용")
                     
                 return WebSearchInfo(
                     performed=True,
@@ -197,3 +204,45 @@ class WebSearchEnricher:
             return False
         
         return True
+
+    def _create_description_from_search_snippets(self, search_results: dict, title: str) -> str:
+        """
+        Brave Search 결과의 스니펫만으로 작품 설명을 생성합니다.
+        Fetch MCP 실패 시 fallback으로 사용됩니다.
+        """
+        if not search_results or not search_results.get("results"):
+            return "정보를 찾을 수 없습니다."
+        
+        # 검색 결과에서 스니펫 추출
+        snippets = []
+        for item in search_results["results"]:
+            if isinstance(item, dict):
+                # title과 description이 있는 경우
+                if item.get("title"):
+                    snippets.append(item["title"])
+                if item.get("description") and item["description"] != "We cannot provide a description for this page right now":
+                    snippets.append(item["description"])
+            elif isinstance(item, str):
+                # URL만 있는 경우는 건너뛰기
+                continue
+        
+        if not snippets:
+            return "정보를 찾을 수 없습니다."
+        
+        # 스니펫들을 결합하여 Gemini로 설명 생성
+        combined_snippets = "\n".join(snippets[:5])  # 상위 5개만 사용
+        
+        prompt = f"""
+        다음은 '{title}' 작품에 대한 웹 검색 결과 스니펫입니다:
+        
+        {combined_snippets}
+        
+        이 정보를 바탕으로 관람객이 이해하기 쉽고 풍부한 작품 설명을 300자 이내로 작성해주세요.
+        """
+        
+        try:
+            description = self.gemini_service.generate_content(prompt)
+            return description or "정보를 찾을 수 없습니다."
+        except Exception as e:
+            logger.error(f"스니펫 기반 설명 생성 실패: {e}")
+            return "정보를 찾을 수 없습니다."

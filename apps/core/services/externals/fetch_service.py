@@ -31,8 +31,8 @@ class FetchService:
             raise ValueError("SMITHERY_API_KEY 환경변수가 필요합니다.")
         
         # MCP 연결 재시도 설정
-        self.max_retries = 3
-        self.retry_delay = 1.0  # 초
+        self.max_retries = 2  # 503 오류 시 재시도 횟수 줄임
+        self.retry_delay = 2.0  # 재시도 간격 증가
 
     def get_fetch_mcp_url(self):
         return (
@@ -93,10 +93,12 @@ class FetchService:
         except TimeoutError as e:
             raise MCPConnectionError(f"MCP 연결 타임아웃: {e}") from e
         except Exception as e:
-            if "502 Bad Gateway" in str(e) or "BrokenResourceError" in str(e):
-                raise MCPConnectionError(f"MCP 서버 일시적 오류: {e}") from e
-            elif "tool" in str(e).lower():
-                raise MCPToolError(f"fetch_txt 도구 실행 실패: {e}") from e
+            error_str = str(e)
+            if "502 Bad Gateway" in error_str or "BrokenResourceError" in error_str or "503 Service Unavailable" in error_str:
+                logger.warning(f"MCP 서버 일시적 오류 감지: {error_str}")
+                raise MCPConnectionError(f"MCP 서버 일시적 오류 (503/502): {error_str}") from e
+            elif "tool" in error_str.lower():
+                raise MCPToolError(f"fetch_txt 도구 실행 실패: {error_str}") from e
             else:
                 raise
 
