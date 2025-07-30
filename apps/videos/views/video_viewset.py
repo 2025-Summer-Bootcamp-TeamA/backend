@@ -100,7 +100,6 @@ class VideoViewSet(ViewSet):
             properties={
                 'ocrText': openapi.Schema(type=openapi.TYPE_STRING, description='OCR로 추출된 텍스트', example='모나리자\n레오나르도 다 빈치\n1503-1519년'),
                 'museumName': openapi.Schema(type=openapi.TYPE_STRING, description='박물관/미술관 이름', example='루브르 박물관'),
-                'placeId': openapi.Schema(type=openapi.TYPE_STRING, description='장소 ID (선택적, 미제공 시 unknown으로 저장)', example='ChIJMwd0tBdzfDURdfxQfHwh4XQ'),
                 'avatarId': openapi.Schema(type=openapi.TYPE_STRING, description='사용할 아바타 ID (선택적, 미제공 시 최신 아바타 자동 사용)', example='4321918387609092991'),
                 'voiceId': openapi.Schema(type=openapi.TYPE_STRING, description='사용할 음성 ID', example='Alice'),
                 'aspectRatio': openapi.Schema(type=openapi.TYPE_STRING, description='비디오 비율', example='9:16'),
@@ -208,9 +207,6 @@ class VideoViewSet(ViewSet):
             video = None
             try:
                 with transaction.atomic():
-                    # place_id는 요청에서 받거나 기본값 사용
-                    place_id = request.data.get('placeId', 'unknown')
-                    
                     # 작품 제목과 작가 정보 추출
                     title = getattr(getattr(artwork_info, 'basic_info', None), 'title', None) or 'Unknown Artwork'
                     artist = getattr(getattr(artwork_info, 'basic_info', None), 'artist', None) or 'Unknown Artist'
@@ -223,7 +219,7 @@ class VideoViewSet(ViewSet):
                         user=request.user if request.user.is_authenticated else None,
                         title=title,
                         artist=artist,
-                        place_id=place_id,
+                        place_id='unknown',  # 기본값으로 설정
                         museum_name=museum_name,  # 박물관명 저장
                         description=description,  # 작품 설명 저장
                         video_url=gcs_video_url,
@@ -244,7 +240,7 @@ class VideoViewSet(ViewSet):
                 'videoUrl': gcs_video_url,  # GCS URL
                 'status': video_info.status,  # 상태 정보
                 'museumName': museum_name,  # 박물관명
-                'placeId': place_id,  # 장소 ID
+                'placeId': 'unknown',  # 기본값으로 설정
                 'artworkInfo': {
                     'title': title,
                     'artist': artist,
