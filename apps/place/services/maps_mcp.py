@@ -75,7 +75,7 @@ def get_mcp_url() -> str:
     
     try:
         config = {
-            "googleMapsApiKey": required_vars["GOOGLE_MAPS_API_KEY"],
+            "apiKey": required_vars["GOOGLE_MAPS_API_KEY"],
         }
         config_b64 = base64.b64encode(json.dumps(config).encode()).decode()
         url = (
@@ -117,6 +117,45 @@ async def debug_mcp_tools() -> Dict[str, Any]:
         raise MapsAPIError(f"MCP 툴 디버깅 실패: {str(e)}") from e
 
 
+async def test_mcp_connection() -> Dict[str, Any]:
+    """MCP 서버 연결을 테스트합니다."""
+    try:
+        url = get_mcp_url()
+        logger.info(f"🔍 MCP URL: {url}")
+        
+        import httpx
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # POST 요청으로 테스트
+            response = await client.post(url, json={
+                "jsonrpc": "2.0",
+                "id": 0,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-06-18",
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "mcp",
+                        "version": "0.1.0"
+                    }
+                }
+            })
+            
+            logger.info(f"🔍 응답 상태 코드: {response.status_code}")
+            logger.info(f"🔍 응답 헤더: {dict(response.headers)}")
+            logger.info(f"🔍 응답 내용: {response.text}")
+            
+            return {
+                "status_code": response.status_code,
+                "headers": dict(response.headers),
+                "content": response.text
+            }
+            
+    except Exception as e:
+        logger.error(f"🔍 MCP 연결 테스트 실패: {str(e)}", exc_info=True)
+        return {"error": str(e)}
+
+
 def validate_search_params(latitude: float, longitude: float, radius: int, keyword: str) -> None:
     """검색 매개변수의 유효성을 검증합니다."""
     if not (-90 <= latitude <= 90):
@@ -155,57 +194,11 @@ async def search_nearby_museums(
     # 매개변수 검증
     validate_search_params(latitude, longitude, radius, keyword)
     
-    # 임시: Mock 데이터로 테스트 (MCP 연결 문제 해결 전까지)
-    logger.warning("🚧 임시 Mock 데이터 사용 중 - MCP 연결 문제로 인해")
+    # MCP 연결 테스트 (필요시에만 활성화)
+    # logger.info("🔍 MCP 연결 테스트 시작...")
+    # test_result = await test_mcp_connection()
+    # logger.info(f"🔍 MCP 연결 테스트 결과: {test_result}")
     
-    mock_result = type('MockResult', (), {
-        'to_dict': lambda self: {
-            'content': [type('MockContent', (), {
-                'text': json.dumps({
-                    'places': [
-                        {
-                            "name": "국립중앙박물관",
-                            "address": "서울 용산구 서빙고로 137",
-                            "place_id": "ChIJzVVVVUB7Lj4ARXyb4HFVDV8s",
-                            "latitude": 37.5242,
-                            "longitude": 126.9806,
-                            "web_url": "https://www.museum.go.kr"
-                        },
-                        {
-                            "name": "국립민속박물관",
-                            "address": "서울 종로구 삼청로 37",
-                            "place_id": "ChIJXXXXXXB7Lj4ARXyb4HFVDV8s",
-                            "latitude": 37.5799,
-                            "longitude": 126.9770,
-                            "web_url": "https://www.nfm.go.kr"
-                        },
-                        {
-                            "name": "서울역사박물관",
-                            "address": "서울 종로구 새문안로 55",
-                            "place_id": "ChIJYYYYYYB7Lj4ARXyb4HFVDV8s",
-                            "latitude": 37.5717,
-                            "longitude": 126.9794,
-                            "web_url": "https://www.museum.seoul.kr"
-                        },
-                        {
-                            "name": "한국은행 화폐박물관",
-                            "address": "서울 중구 남대문로 39",
-                            "place_id": "ChIJZZZZZZB7Lj4ARXyb4HFVDV8s",
-                            "latitude": 37.5598,
-                            "longitude": 126.9783,
-                            "web_url": "https://museum.bok.or.kr"
-                        }
-                    ]
-                })
-            })]
-        }
-    })()
-    
-    logger.info("✅ Mock 데이터 반환 완료")
-    return mock_result
-    
-    # 실제 MCP 호출 코드 (현재 주석 처리)
-    """
     try:
         url = get_mcp_url()
         
@@ -221,13 +214,13 @@ async def search_nearby_museums(
                 available_tools = [tool.name for tool in tools_result.tools]
                 logger.info(f"🔍 사용 가능한 툴 목록: {available_tools}")
                 
-                # 각 툴의 상세 정보도 로깅
-                for tool in tools_result.tools:
-                    logger.info(f"  📋 툴: {tool.name}")
-                    if hasattr(tool, 'description'):
-                        logger.info(f"     설명: {tool.description}")
-                    if hasattr(tool, 'inputSchema'):
-                        logger.info(f"     입력 스키마: {tool.inputSchema}")
+                # 각 툴의 상세 정보 (필요시에만 활성화)
+                # for tool in tools_result.tools:
+                #     logger.info(f"  📋 툴: {tool.name}")
+                #     if hasattr(tool, 'description'):
+                #         logger.info(f"     설명: {tool.description}")
+                #     if hasattr(tool, 'inputSchema'):
+                #         logger.info(f"     입력 스키마: {tool.inputSchema}")
                 
                 # 실제 툴을 찾아서 호출
                 target_tool = None
@@ -258,38 +251,38 @@ async def search_nearby_museums(
                 
                 # 여러 페이로드 구조 시도
                 possible_payloads = [
-                    # 구조 1: 서울 근처 좌표로 테스트 (더 현실적인 좌표)
+                    # 구조 1: 실제 사용자 좌표 사용
                     {
                         "query": keyword.strip(),
-                        "location": f"{37.5665},{126.9780}",  # 서울시청 좌표
+                        "location": f"{latitude},{longitude}",
                         "radius": radius
                     },
-                    # 구조 2: 기존 구조
+                    # 구조 2: 객체 형태의 location
                     {
                         "query": keyword.strip(),
                         "location": {
-                            "latitude": 37.5665,
-                            "longitude": 126.9780
+                            "latitude": latitude,
+                            "longitude": longitude
                         },
                         "radius": radius
                     },
                     # 구조 3: 간단한 구조
                     {
                         "query": keyword.strip(),
-                        "latitude": 37.5665,
-                        "longitude": 126.9780,
+                        "latitude": latitude,
+                        "longitude": longitude,
                         "radius": radius
                     },
                     # 구조 4: Google Places API 스타일
                     {
-                        "location": f"{37.5665},{126.9780}",
+                        "location": f"{latitude},{longitude}",
                         "radius": radius,
                         "keyword": keyword.strip(),
                         "type": "museum"
                     },
                     # 구조 5: 텍스트 검색 스타일
                     {
-                        "textQuery": f"{keyword.strip()} near Seoul, South Korea"
+                        "textQuery": f"{keyword.strip()} near {latitude},{longitude}"
                     }
                 ]
                 
@@ -298,12 +291,11 @@ async def search_nearby_museums(
                 # 각 페이로드 구조 시도
                 for i, payload in enumerate(possible_payloads):
                     try:
-                        logger.info(f"🧪 페이로드 구조 {i+1} 시도 ({target_tool}): {payload}")
                         result = await session.call_tool(target_tool, payload)
                         logger.info("✅ MCP 검색 완료!")
                         return result
                     except Exception as e:
-                        logger.warning(f"❌ 페이로드 구조 {i+1} 실패: {str(e)}")
+                        logger.warning(f"페이로드 구조 {i+1} 실패: {str(e)}")
                         last_error = e
                         continue
                 
@@ -321,8 +313,27 @@ async def search_nearby_museums(
         raise
     except Exception as e:
         logger.error(f"Google Maps MCP 호출 중 오류 발생: {str(e)}", exc_info=True)
+        
+        # httpx.HTTPStatusError인 경우 더 자세한 정보 로깅
+        if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+            logger.error(f"🔍 HTTP 상태 코드: {e.response.status_code}")
+            logger.error(f"🔍 응답 헤더: {dict(e.response.headers)}")
+            try:
+                logger.error(f"🔍 응답 내용: {e.response.text}")
+            except:
+                pass
+        
+        # ExceptionGroup인 경우 내부 예외들도 확인
+        if hasattr(e, '__cause__') and e.__cause__:
+            logger.error(f"🔍 원인 예외: {e.__cause__}")
+            if hasattr(e.__cause__, 'response') and hasattr(e.__cause__.response, 'status_code'):
+                logger.error(f"🔍 원인 HTTP 상태 코드: {e.__cause__.response.status_code}")
+                try:
+                    logger.error(f"🔍 원인 응답 내용: {e.__cause__.response.text}")
+                except:
+                    pass
+        
         raise MapsAPIError(f"Google Maps MCP 호출 중 오류 발생: {str(e)}") from e
-    """
 
 
 def process_mcp_response(result: Any, user_lat: float, user_lon: float, radius: int, max_results: int = 4) -> List[Dict[str, Any]]:
@@ -373,25 +384,45 @@ def process_mcp_response(result: Any, user_lat: float, user_lon: float, radius: 
         
         # 데이터 정리 및 거리 계산
         processed_places = []
-        for place in places[:max_results]:
-            # 필수 필드 검증
-            required_fields = ["name", "address", "place_id"]
-            if not all(field in place for field in required_fields):
-                logger.warning(f"필수 필드가 누락된 place 건너뜀: {place}")
+        
+        for i, place in enumerate(places):  # 모든 박물관 처리
+            
+            # 이름은 필수, 나머지는 선택적
+            if not place.get("name"):
+                logger.warning(f"이름이 없는 place 건너뜀: {place}")
                 continue
                 
+            # 주소 추출 (formatted_address 또는 address)
+            address = place.get("formatted_address") or place.get("address") or ""
+            
+            # 좌표 추출 (location 객체 또는 직접 필드)
+            place_lat = 0.0
+            place_lon = 0.0
+            
+            # 좌표 추출 시도 1: location 객체
+            if "location" in place and isinstance(place["location"], dict):
+                place_lat = place["location"].get("lat", 0.0)
+                place_lon = place["location"].get("lng", 0.0)
+            # 좌표 추출 시도 2: 직접 필드
+            elif place.get("latitude") and place.get("longitude"):
+                place_lat = place.get("latitude", 0.0)
+                place_lon = place.get("longitude", 0.0)
+            else:
+                logger.warning(f"좌표를 찾을 수 없음: {place.get('name', 'Unknown')}")
+                continue
+            
             # 거리 계산
-            place_lat = place.get("latitude", 0.0)
-            place_lon = place.get("longitude", 0.0)
             distance = calculate_distance(user_lat, user_lon, place_lat, place_lon)
             
-            # 불필요한 필드 제거 및 거리 정보 추가
+            # 처리된 장소 정보 구성
             processed_place = {
                 "name": place.get("name", ""),
-                "address": place.get("address", ""),
+                "address": address,
                 "place_id": place.get("place_id", ""),
                 "latitude": place_lat,
                 "longitude": place_lon,
+                "rating": place.get("rating", None),
+                "types": place.get("types", []),
                 "web_url": place.get("web_url", None),
                 "distance_m": distance
             }
@@ -405,12 +436,15 @@ def process_mcp_response(result: Any, user_lat: float, user_lon: float, radius: 
         # 🎯 거리 순으로 정렬 (가까운 순)
         processed_places.sort(key=lambda x: x["distance_m"])
         
-        # 🏆 정렬된 순서에 따라 rank 부여
+        # 🏆 정렬된 순서에 따라 rank 부여하고 max_results만 반환
         for idx, place in enumerate(processed_places):
             place["rank"] = idx + 1
         
-        logger.info(f"처리된 박물관 수: {len(processed_places)} (반경 {radius}m 내, 거리순 정렬 완료)")
-        return processed_places
+        # 최대 결과 수만큼만 반환
+        final_places = processed_places[:max_results]
+        
+        logger.info(f"처리된 박물관 수: {len(processed_places)} -> 최종 반환: {len(final_places)}개 (반경 {radius}m 내, 거리순 정렬 완료)")
+        return final_places
         
     except json.JSONDecodeError as e:
         logger.error(f"JSON 파싱 오류: {str(e)}")
