@@ -194,10 +194,10 @@ async def search_nearby_museums(
     # 매개변수 검증
     validate_search_params(latitude, longitude, radius, keyword)
     
-    # 먼저 MCP 연결 테스트
-    logger.info("🔍 MCP 연결 테스트 시작...")
-    test_result = await test_mcp_connection()
-    logger.info(f"🔍 MCP 연결 테스트 결과: {test_result}")
+    # MCP 연결 테스트 (필요시에만 활성화)
+    # logger.info("🔍 MCP 연결 테스트 시작...")
+    # test_result = await test_mcp_connection()
+    # logger.info(f"🔍 MCP 연결 테스트 결과: {test_result}")
     
     try:
         url = get_mcp_url()
@@ -214,13 +214,13 @@ async def search_nearby_museums(
                 available_tools = [tool.name for tool in tools_result.tools]
                 logger.info(f"🔍 사용 가능한 툴 목록: {available_tools}")
                 
-                # 각 툴의 상세 정보도 로깅
-                for tool in tools_result.tools:
-                    logger.info(f"  📋 툴: {tool.name}")
-                    if hasattr(tool, 'description'):
-                        logger.info(f"     설명: {tool.description}")
-                    if hasattr(tool, 'inputSchema'):
-                        logger.info(f"     입력 스키마: {tool.inputSchema}")
+                # 각 툴의 상세 정보 (필요시에만 활성화)
+                # for tool in tools_result.tools:
+                #     logger.info(f"  📋 툴: {tool.name}")
+                #     if hasattr(tool, 'description'):
+                #         logger.info(f"     설명: {tool.description}")
+                #     if hasattr(tool, 'inputSchema'):
+                #         logger.info(f"     입력 스키마: {tool.inputSchema}")
                 
                 # 실제 툴을 찾아서 호출
                 target_tool = None
@@ -291,19 +291,11 @@ async def search_nearby_museums(
                 # 각 페이로드 구조 시도
                 for i, payload in enumerate(possible_payloads):
                     try:
-                        logger.info(f"🧪 페이로드 구조 {i+1} 시도 ({target_tool}): {payload}")
                         result = await session.call_tool(target_tool, payload)
                         logger.info("✅ MCP 검색 완료!")
                         return result
                     except Exception as e:
-                        logger.warning(f"❌ 페이로드 구조 {i+1} 실패: {str(e)}")
-                        # 422 오류인 경우 응답 내용도 로깅
-                        if hasattr(e, 'response') and e.response:
-                            try:
-                                error_content = e.response.text
-                                logger.error(f"🔍 422 오류 응답 내용: {error_content}")
-                            except:
-                                pass
+                        logger.warning(f"페이로드 구조 {i+1} 실패: {str(e)}")
                         last_error = e
                         continue
                 
@@ -392,10 +384,8 @@ def process_mcp_response(result: Any, user_lat: float, user_lon: float, radius: 
         
         # 데이터 정리 및 거리 계산
         processed_places = []
-        logger.info(f"총 {len(places)}개 박물관 처리 시작...")
         
         for i, place in enumerate(places):  # 모든 박물관 처리
-            logger.info(f"처리 중: {i+1}/{len(places)} - {place.get('name', 'Unknown')}")
             
             # 이름은 필수, 나머지는 선택적
             if not place.get("name"):
@@ -413,19 +403,16 @@ def process_mcp_response(result: Any, user_lat: float, user_lon: float, radius: 
             if "location" in place and isinstance(place["location"], dict):
                 place_lat = place["location"].get("lat", 0.0)
                 place_lon = place["location"].get("lng", 0.0)
-                logger.info(f"  📍 좌표 추출 (location 객체): lat={place_lat}, lng={place_lon}")
             # 좌표 추출 시도 2: 직접 필드
             elif place.get("latitude") and place.get("longitude"):
                 place_lat = place.get("latitude", 0.0)
                 place_lon = place.get("longitude", 0.0)
-                logger.info(f"  📍 좌표 추출 (직접 필드): lat={place_lat}, lng={place_lon}")
             else:
-                logger.warning(f"  ⚠️ 좌표를 찾을 수 없음: {place}")
+                logger.warning(f"좌표를 찾을 수 없음: {place.get('name', 'Unknown')}")
                 continue
             
             # 거리 계산
             distance = calculate_distance(user_lat, user_lon, place_lat, place_lon)
-            logger.info(f"거리 계산: {place.get('name')} - 사용자({user_lat}, {user_lon}) -> 장소({place_lat}, {place_lon}) = {distance:.2f}m")
             
             # 처리된 장소 정보 구성
             processed_place = {
